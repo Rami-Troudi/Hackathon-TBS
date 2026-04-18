@@ -1,0 +1,343 @@
+openapi: 3.0.3
+info:
+  title: Senior Companion API
+  version: 1.0.0
+  description: |
+    MVP API contract for Senior Companion.
+    Positioning: daily monitoring and family coordination, not medical diagnostics.
+servers:
+  - url: https://api.senior-companion.local/v1
+
+tags:
+  - name: Seniors
+  - name: CheckIn
+  - name: Medication
+  - name: Incidents
+  - name: Dashboard
+  - name: Alerts
+
+paths:
+  /seniors/{seniorId}/status:
+    get:
+      tags: [Dashboard]
+      summary: Get global senior status
+      operationId: getSeniorStatus
+      parameters:
+        - $ref: '#/components/parameters/SeniorId'
+      responses:
+        '200':
+          description: Current global status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GlobalStatusResponse'
+
+  /seniors/{seniorId}/checkins:
+    post:
+      tags: [CheckIn]
+      summary: Record a senior check-in confirmation
+      operationId: createCheckIn
+      parameters:
+        - $ref: '#/components/parameters/SeniorId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckInRequest'
+      responses:
+        '201':
+          description: Check-in recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckInEvent'
+
+  /seniors/{seniorId}/medication-events:
+    post:
+      tags: [Medication]
+      summary: Submit medication confirmation outcome
+      operationId: createMedicationEvent
+      parameters:
+        - $ref: '#/components/parameters/SeniorId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MedicationEventRequest'
+      responses:
+        '201':
+          description: Medication event recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MedicationEvent'
+
+  /seniors/{seniorId}/incidents/suspected:
+    post:
+      tags: [Incidents]
+      summary: Register a suspicious incident signal
+      operationId: createIncidentSuspected
+      parameters:
+        - $ref: '#/components/parameters/SeniorId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentSuspectedRequest'
+      responses:
+        '201':
+          description: Incident registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentEvent'
+
+  /seniors/{seniorId}/incidents/{incidentId}/resolve:
+    post:
+      tags: [Incidents]
+      summary: Resolve incident with senior response or guardian action
+      operationId: resolveIncident
+      parameters:
+        - $ref: '#/components/parameters/SeniorId'
+        - name: incidentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentResolveRequest'
+      responses:
+        '200':
+          description: Incident resolved state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IncidentEvent'
+
+  /guardians/{guardianId}/alerts:
+    get:
+      tags: [Alerts]
+      summary: List alerts for guardian
+      operationId: listGuardianAlerts
+      parameters:
+        - $ref: '#/components/parameters/GuardianId'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [ACTIVE, RESOLVED]
+      responses:
+        '200':
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Alert'
+
+  /guardians/{guardianId}/timeline:
+    get:
+      tags: [Dashboard]
+      summary: Get recent senior events for guardian timeline
+      operationId: getGuardianTimeline
+      parameters:
+        - $ref: '#/components/parameters/GuardianId'
+        - name: seniorId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Timeline events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TimelineEvent'
+
+components:
+  parameters:
+    SeniorId:
+      name: seniorId
+      in: path
+      required: true
+      schema:
+        type: string
+    GuardianId:
+      name: guardianId
+      in: path
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    GlobalStatus:
+      type: string
+      enum: [OK, WATCH, ACTION_REQUIRED]
+
+    Severity:
+      type: string
+      enum: [INFO, WARNING, CRITICAL]
+
+    GlobalStatusResponse:
+      type: object
+      required: [seniorId, status, reasons, updatedAt]
+      properties:
+        seniorId:
+          type: string
+        status:
+          $ref: '#/components/schemas/GlobalStatus'
+        reasons:
+          type: array
+          items:
+            type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    CheckInRequest:
+      type: object
+      required: [source, timestamp]
+      properties:
+        source:
+          type: string
+          enum: [MANUAL, REMINDER]
+        timestamp:
+          type: string
+          format: date-time
+
+    CheckInEvent:
+      type: object
+      required: [id, seniorId, type, timestamp]
+      properties:
+        id:
+          type: string
+        seniorId:
+          type: string
+        type:
+          type: string
+          enum: [CheckInCompleted, CheckInMissed]
+        timestamp:
+          type: string
+          format: date-time
+
+    MedicationEventRequest:
+      type: object
+      required: [planId, outcome, timestamp]
+      properties:
+        planId:
+          type: string
+        outcome:
+          type: string
+          enum: [TAKEN, IGNORED, MISSED]
+        timestamp:
+          type: string
+          format: date-time
+
+    MedicationEvent:
+      type: object
+      required: [id, seniorId, planId, outcome, timestamp]
+      properties:
+        id:
+          type: string
+        seniorId:
+          type: string
+        planId:
+          type: string
+        outcome:
+          type: string
+          enum: [TAKEN, IGNORED, MISSED]
+        timestamp:
+          type: string
+          format: date-time
+
+    IncidentSuspectedRequest:
+      type: object
+      required: [signalSource, timestamp]
+      properties:
+        signalSource:
+          type: string
+          enum: [MOTION_SENSOR, USER_TRIGGER, MANUAL_GUARDIAN]
+        timestamp:
+          type: string
+          format: date-time
+        confidence:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+
+    IncidentResolveRequest:
+      type: object
+      required: [resolution, timestamp]
+      properties:
+        resolution:
+          type: string
+          enum: [SENIOR_OK, SENIOR_NEEDS_HELP, GUARDIAN_CONFIRMED_SAFE, EMERGENCY_DISPATCHED]
+        timestamp:
+          type: string
+          format: date-time
+
+    IncidentEvent:
+      type: object
+      required: [id, seniorId, state, timestamp]
+      properties:
+        id:
+          type: string
+        seniorId:
+          type: string
+        state:
+          type: string
+          enum: [SUSPECTED, CONFIRMING, ESCALATED, RESOLVED]
+        timestamp:
+          type: string
+          format: date-time
+
+    Alert:
+      type: object
+      required: [id, seniorId, severity, message, status, createdAt]
+      properties:
+        id:
+          type: string
+        seniorId:
+          type: string
+        severity:
+          $ref: '#/components/schemas/Severity'
+        message:
+          type: string
+        suggestedAction:
+          type: string
+        status:
+          type: string
+          enum: [ACTIVE, RESOLVED]
+        createdAt:
+          type: string
+          format: date-time
+
+    TimelineEvent:
+      type: object
+      required: [id, seniorId, type, timestamp]
+      properties:
+        id:
+          type: string
+        seniorId:
+          type: string
+        type:
+          type: string
+          example: MedicationTaken
+        summary:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

@@ -1,0 +1,1 @@
+export type Screen = 'senior-home' | 'medication' | 'incident' | 'dashboard' | 'alerts'
