@@ -79,7 +79,7 @@ Supported `APP_ENV` values:
 | `staging` | `https://staging.prototype.local` | Enabled (debug builds) |
 | `prod` | `https://api.prototype.local` | Disabled |
 
-> **Note:** All API URLs are stubs in Group 0/G1/G2. No real network calls are made.
+> **Note:** All API URLs are stubs in Group 0/G1/G2/G3. No real network calls are made.
 > Dio is scaffolded for future use only.
 
 ### Run on a specific device
@@ -106,7 +106,7 @@ fvm flutter run -d chrome               # Web (not a target platform for this pr
 
 ---
 
-## Startup behavior (G1)
+## Startup behavior (G1 + G3)
 
 On first launch (no local session), the app routes to onboarding:
 
@@ -117,6 +117,24 @@ On first launch (no local session), the app routes to onboarding:
 
 If a valid local session already exists, splash restores it and routes directly
 to the matching role experience.
+
+---
+
+## Senior feature flow (G3)
+
+After onboarding with a senior profile:
+
+1. Senior lands on `/senior`
+2. Open core modules:
+   - `/senior/check-in`
+   - `/senior/medication`
+   - `/senior/incident`
+3. Actions persist events locally and update dashboard/timeline status
+
+For repeated demos, use **Settings** actions:
+- Clear Session
+- Reseed Demo Data
+- Reset Demo Data
 
 ---
 
@@ -149,16 +167,21 @@ Run with verbose output:
 fvm flutter test --reporter expanded
 ```
 
-Current targeted G2 tests:
+Current targeted tests (G2 + G3):
 
 - `test/app/bootstrap/app_initializer_test.dart` (bootstrap init path)
 - `test/core/repositories/local_profile_seed_test.dart` (seeding/reset behavior)
 - `test/core/repositories/local_repositories_test.dart` (session/preferences local repos)
 - `test/core/repositories/local_event_repository_test.dart` (event persistence + timeline queries)
 - `test/core/repositories/local_dashboard_repository_test.dart` (summary derivation)
+- `test/core/repositories/local_check_in_repository_test.dart` (check-in state/reconciliation)
+- `test/core/repositories/local_medication_repository_test.dart` (medication reminder actions)
+- `test/core/repositories/local_incident_repository_test.dart` (incident flow transitions)
+- `test/core/repositories/g3_senior_flow_status_integration_test.dart` (senior actions -> dashboard/status)
 - `test/core/events/app_event_mapper_test.dart` (runtime-to-storage event mapping)
 - `test/core/events/status_engine_test.dart` (deterministic status rules)
 - `test/features/splash/splash_routing_test.dart` (startup routing)
+- `test/features/check_in/check_in_screen_test.dart` (senior check-in UI action wiring)
 
 ---
 
@@ -188,7 +211,7 @@ fvm flutter clean && fvm flutter pub get
   use mock or local implementations.
 - **Storage policy for G2.** `SharedPreferences` is reserved for
   preferences/session/flags only. Structured entities are stored in Hive
-  (profiles, profile links, event records).
+  (profiles, profile links, event records, medication plans).
 - **No code generation currently required.** G1 uses manual JSON maps for Hive.
   If code generation is introduced later (`hive_generator`, `freezed`, etc.), run:
   ```bash
@@ -206,9 +229,9 @@ fvm flutter clean && fvm flutter pub get
   - Reseed Demo Data
   - Reset Demo Data
   to quickly prepare demo scenarios during hackathon iteration.
-- **G2 developer event controls.** Open the Developer Hub (`/home`) from
-  Senior/Guardian screens to generate check-in/medication/incident/emergency
-  events and clear local event history.
+- **G3 senior-first event generation.** Senior screens now generate real
+  check-in/medication/incident events. Developer Hub (`/home`) remains useful
+  for diagnostics and manual scenario setup.
 
 ---
 

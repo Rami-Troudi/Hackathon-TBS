@@ -241,6 +241,5 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Senior Home'), findsOneWidget);
-    expect(find.text('Senior Home Placeholder'), findsOneWidget);
   });
 }

@@ -1,6 +1,6 @@
-# Architecture — Senior Companion Prototype
+# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3)
 
-This document describes the technical architecture after **Group 2** and serves
+This document describes the technical architecture after **Group 3** and serves
 as the implementation guide for future milestones.
 
 ---
@@ -362,10 +362,10 @@ await ref.read(notificationServiceProvider).requestPermission();
 
 ## 7. Storage service
 
-Group 1 storage policy uses two layers:
+Group 1 + Group 3 storage policy uses two layers:
 
 - `StorageService` (`SharedPreferences`) for lightweight preferences/flags/session.
-- Hive for structured local entities (profiles, links, event records, future entities).
+- Hive for structured local entities (profiles, links, event records, medication plans, future entities).
 
 ### SharedPreferences usage
 
@@ -408,6 +408,7 @@ opened at startup:
 - `guardian_profiles`
 - `profile_links`
 - `event_records`
+- `medication_plans`
 - `prototype_metadata`
 
 Local repositories use those boxes for profile/session-adjacent prototype data.
@@ -425,6 +426,27 @@ deterministic, explainable rules:
 
 `LocalDashboardRepository` aggregates these outputs into `DashboardSummary`
 for Home/Guardian views without mock counters.
+
+### G3 senior feature bundle data flow
+
+Group 3 uses the existing G2 event core as source of truth and adds real senior-facing flows:
+
+- **Check-in** (`LocalCheckInRepository`)
+  - derives today's check-in state
+  - reconciles missed morning window deterministically
+  - emits `CheckInCompletedEvent` / `CheckInMissedEvent`
+  - escalates `"I need help"` into incident+emergency events
+- **Medication** (`LocalMedicationRepository`)
+  - stores medication plans in Hive (`medication_plans`)
+  - derives reminder state from plans + persisted medication events
+  - emits `MedicationTakenEvent` / `MedicationMissedEvent`
+- **Incident/help** (`LocalIncidentRepository`)
+  - handles suspicious/confirmed/dismissed/emergency transitions
+  - emits `IncidentSuspectedEvent`, `IncidentConfirmedEvent`, `IncidentDismissedEvent`, `EmergencyTriggeredEvent`
+
+Senior screens under `features/senior`, `features/check_in`, `features/medication`, and `features/incident`
+consume these repositories through Riverpod providers. Guardian summary/timeline updates automatically via existing
+dashboard aggregation over persisted events.
 
 ### Demo data reset workflow
 
@@ -568,7 +590,10 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 | `AppRoutes.onboardingRole` | `/onboarding/role` | `RoleSelectionScreen` |
 | `AppRoutes.onboardingProfile` | `/onboarding/profile/:role` | `ProfileSelectionScreen` |
 | `AppRoutes.home` | `/home` | `HomeScreen` (demo hub) |
-| `AppRoutes.seniorHome` | `/senior` | `SeniorHomePlaceholderScreen` |
+| `AppRoutes.seniorHome` | `/senior` | `SeniorHomeScreen` |
+| `AppRoutes.checkIn` | `/senior/check-in` | `CheckInScreen` |
+| `AppRoutes.medication` | `/senior/medication` | `MedicationScreen` |
+| `AppRoutes.incident` | `/senior/incident` | `IncidentConfirmationScreen` |
 | `AppRoutes.guardianHome` | `/guardian` | `GuardianHomePlaceholderScreen` |
 | `AppRoutes.settings` | `/settings` | `SettingsScreen` |
 

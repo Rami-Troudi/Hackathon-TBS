@@ -3,6 +3,7 @@ class HiveBoxNames {
   static const guardianProfiles = 'guardian_profiles';
   static const profileLinks = 'profile_links';
   static const eventRecords = 'event_records';
+  static const medicationPlans = 'medication_plans';
   static const metadata = 'prototype_metadata';
 
   static const all = <String>[
@@ -10,6 +11,7 @@ class HiveBoxNames {
     guardianProfiles,
     profileLinks,
     eventRecords,
+    medicationPlans,
     metadata,
   ];
 }

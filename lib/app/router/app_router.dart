@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
+import 'package:senior_companion/features/check_in/check_in_screen.dart';
 import 'package:senior_companion/features/onboarding/profile_selection_screen.dart';
 import 'package:senior_companion/features/onboarding/role_selection_screen.dart';
 import 'package:senior_companion/features/guardian/guardian_home_placeholder_screen.dart';
 import 'package:senior_companion/features/home/home_screen.dart';
-import 'package:senior_companion/features/senior/senior_home_placeholder_screen.dart';
+import 'package:senior_companion/features/incident/incident_confirmation_screen.dart';
+import 'package:senior_companion/features/medication/medication_screen.dart';
+import 'package:senior_companion/features/senior/senior_home_screen.dart';
 import 'package:senior_companion/features/settings/settings_screen.dart';
 import 'package:senior_companion/features/splash/splash_screen.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
@@ -42,7 +45,22 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.seniorHome,
         name: 'senior-home',
-        builder: (_, __) => const SeniorHomePlaceholderScreen(),
+        builder: (_, __) => const SeniorHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.checkIn,
+        name: 'check-in',
+        builder: (_, __) => const CheckInScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.medication,
+        name: 'medication',
+        builder: (_, __) => const MedicationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.incident,
+        name: 'incident',
+        builder: (_, __) => const IncidentConfirmationScreen(),
       ),
       GoRoute(
         path: AppRoutes.guardianHome,

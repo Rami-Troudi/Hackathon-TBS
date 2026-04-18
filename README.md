@@ -1,8 +1,8 @@
-# Senior Companion - Group 2 Prototype (Event Core)
+# Senior Companion - Group 3 Prototype (Senior Feature Bundle)
 
-This repository contains **Group 0 + Group 1 + Group 2** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, and a real persisted event/timeline/status core.
+This repository contains **Group 0 + Group 1 + Group 2 + Group 3** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, and real senior-facing check-in/medication/incident flows.
 
-## Scope of this foundation (G0 + G1 + G2)
+## Scope of this foundation (G0 + G1 + G2 + G3)
 
 Included:
 - Flutter mobile app bootstrap
@@ -15,7 +15,7 @@ Included:
 - Dio networking scaffold for future integrations
 - Mock/local repositories with Riverpod injection
 - Logging, structured errors, and lightweight app event bus
-- Placeholder screens for Splash/Home/Senior/Guardian/Settings
+- Placeholder-free senior core flow screens (check-in, medication, incident/help)
 - Onboarding flow with role + profile selection
 - Prototype local session restoration from splash
 - Hive structured local storage for demo profiles and profile links
@@ -25,9 +25,13 @@ Included:
 - Deterministic local status engine (`ok` / `watch` / `actionRequired`)
 - Real local dashboard summary aggregation from persisted events
 - Developer event generation controls (publish + persist) and event history clearing
+- Real senior event generation flows:
+  - daily check-in (`I’m okay` / `I need help`)
+  - medication confirmation (`Taken` / `Skip`)
+  - incident vigilance and emergency escalation
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
-  - `Hive` for structured entities (profiles, links, event records, future feature entities)
+  - `Hive` for structured entities (profiles, links, event records, medication plans, future entities)
 
 Not included:
 - Backend/server setup
@@ -109,6 +113,19 @@ For prototype validation, open the **Developer Hub** (`/home`) from Senior/Guard
 - persist events locally
 - clear local event history for the active senior context
 
+## G3 Senior Feature Bundle
+
+Group 3 makes senior flows the primary event source (instead of developer-only generation):
+
+- `/senior` -> real senior home with global status, primary daily action, quick help, and module entry points
+- `/senior/check-in` -> check-in state (`pending/completed/missed`) and action buttons
+- `/senior/medication` -> medication reminders with `Taken` and `Skip` actions
+- `/senior/incident` -> suspicious incident, confirmation/dismissal, and emergency escalation flow
+
+All actions publish and persist real events through the existing G2 core (`AppEventRecorder` + `EventRepository`) and immediately affect local status/timeline/dashboard aggregation.
+
+Developer Hub remains available for diagnostics and demo control, but it is no longer the only practical way to generate meaningful product events.
+
 ## Demo data reset flow (G1)
 
 From **Settings**:
@@ -149,7 +166,10 @@ lib/
   features/
     splash/
     onboarding/
+    check_in/
     home/
+    incident/
+    medication/
     senior/
     guardian/
     settings/

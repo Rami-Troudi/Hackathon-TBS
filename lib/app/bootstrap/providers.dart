@@ -14,15 +14,21 @@ import 'package:senior_companion/core/notifications/notification_service.dart';
 import 'package:senior_companion/core/permissions/permission_service.dart';
 import 'package:senior_companion/core/repositories/active_senior_resolver.dart';
 import 'package:senior_companion/core/repositories/app_session_repository.dart';
+import 'package:senior_companion/core/repositories/check_in_repository.dart';
 import 'package:senior_companion/core/repositories/dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/event_repository.dart';
+import 'package:senior_companion/core/repositories/incident_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_app_session_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_check_in_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_event_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_incident_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_medication_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_preferences_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_profile_repository.dart';
+import 'package:senior_companion/core/repositories/medication_repository.dart';
 import 'package:senior_companion/core/repositories/preferences_repository.dart';
 import 'package:senior_companion/core/repositories/profile_repository.dart';
 import 'package:senior_companion/core/storage/hive_initializer.dart';
@@ -141,6 +147,30 @@ final appEventRecorderProvider = Provider<AppEventRecorder>(
   (ref) => AppEventRecorder(
     eventBus: ref.watch(appEventBusProvider),
     eventRepository: ref.watch(eventRepositoryProvider),
+  ),
+);
+
+final checkInRepositoryProvider = Provider<CheckInRepository>(
+  (ref) => LocalCheckInRepository(
+    eventRepository: ref.watch(eventRepositoryProvider),
+    eventRecorder: ref.watch(appEventRecorderProvider),
+  ),
+);
+
+final medicationRepositoryProvider = Provider<MedicationRepository>(
+  (ref) => LocalMedicationRepository(
+    hiveInitializer: ref.watch(hiveInitializerProvider),
+    profileRepository: ref.watch(profileRepositoryProvider),
+    eventRepository: ref.watch(eventRepositoryProvider),
+    eventRecorder: ref.watch(appEventRecorderProvider),
+  ),
+);
+
+final incidentRepositoryProvider = Provider<IncidentRepository>(
+  (ref) => LocalIncidentRepository(
+    eventRepository: ref.watch(eventRepositoryProvider),
+    eventRecorder: ref.watch(appEventRecorderProvider),
+    statusEngine: ref.watch(statusEngineProvider),
   ),
 );
 
