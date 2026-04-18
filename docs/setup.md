@@ -14,7 +14,7 @@
 ### Verify your Flutter installation
 
 ```bash
-flutter doctor
+fvm flutter doctor
 ```
 
 All entries should be green before running the project. Pay special attention to:
@@ -39,20 +39,20 @@ This repository does not commit the `android/` and `ios/` platform folders.
 Run this once after cloning to generate them:
 
 ```bash
-flutter create . --platforms=android,ios
+fvm flutter create . --platforms=android,ios
 ```
 
 If you are targeting only one platform:
 
 ```bash
-flutter create . --platforms=android
-flutter create . --platforms=ios
+fvm flutter create . --platforms=android
+fvm flutter create . --platforms=ios
 ```
 
 ### 3. Install dependencies
 
 ```bash
-flutter pub get
+fvm flutter pub get
 ```
 
 ---
@@ -62,13 +62,13 @@ flutter pub get
 ### Default run (dev environment)
 
 ```bash
-flutter run
+fvm flutter run
 ```
 
 ### Run with an explicit environment
 
 ```bash
-flutter run --dart-define=APP_ENV=dev
+fvm flutter run --dart-define=APP_ENV=dev
 ```
 
 Supported `APP_ENV` values:
@@ -87,21 +87,21 @@ Supported `APP_ENV` values:
 List available devices:
 
 ```bash
-flutter devices
+fvm flutter devices
 ```
 
 Run on a specific device by device ID:
 
 ```bash
-flutter run -d <device-id>
+fvm flutter run -d <device-id>
 ```
 
 Examples:
 
 ```bash
-flutter run -d emulator-5554        # Android emulator
-flutter run -d "iPhone 15"          # iOS simulator by name
-flutter run -d chrome               # Web (not a target platform for this project)
+fvm flutter run -d emulator-5554        # Android emulator
+fvm flutter run -d "iPhone 15"          # iOS simulator by name
+fvm flutter run -d chrome               # Web (not a target platform for this project)
 ```
 
 ---
@@ -109,7 +109,7 @@ flutter run -d chrome               # Web (not a target platform for this projec
 ## Static analysis
 
 ```bash
-flutter analyze
+fvm flutter analyze
 ```
 
 The project uses `flutter_lints` via `analysis_options.yaml`. All new code
@@ -120,19 +120,19 @@ should pass analysis cleanly before committing.
 ## Running tests
 
 ```bash
-flutter test
+fvm flutter test
 ```
 
 Run a specific test file:
 
 ```bash
-flutter test test/core/app_result_test.dart
+fvm flutter test test/core/app_result_test.dart
 ```
 
 Run with verbose output:
 
 ```bash
-flutter test --reporter expanded
+fvm flutter test --reporter expanded
 ```
 
 ---
@@ -140,19 +140,19 @@ flutter test --reporter expanded
 ## Useful development commands
 
 ```bash
-# Hot reload is automatic when using flutter run
+# Hot reload is automatic when using fvm flutter run
 # Press r in the terminal to trigger a hot reload manually
 # Press R for a full hot restart
 # Press q to quit
 
 # Check for outdated packages
-flutter pub outdated
+fvm flutter pub outdated
 
 # Upgrade packages within constraint bounds
-flutter pub upgrade
+fvm flutter pub upgrade
 
 # Clean build artifacts (useful when things break unexpectedly)
-flutter clean && flutter pub get
+fvm flutter clean && fvm flutter pub get
 ```
 
 ---
@@ -160,7 +160,10 @@ flutter clean && flutter pub get
 ## Project-specific notes
 
 - **No backend required.** The prototype is fully local-first. All repositories
-  use mock or SharedPreferences-backed implementations.
+  use mock or local implementations.
+- **Storage policy for G0/G1.** `SharedPreferences` is reserved for
+  preferences/session/flags only. Structured entities (timeline/events/meds/incidents)
+  must use a dedicated local store (Hive planned for G1).
 - **No code generation.** Group 0 does not use `build_runner`, `freezed`, or
   `json_serializable`. If these are added in a later group, run:
   ```bash
@@ -177,13 +180,13 @@ flutter clean && flutter pub get
 
 ## Troubleshooting
 
-### `flutter doctor` shows issues with Android SDK
+### `fvm flutter doctor` shows issues with Android SDK
 
 Run Android Studio and go to **SDK Manager → SDK Tools**. Ensure
 `Android SDK Build-Tools`, `Android SDK Command-line Tools`, and
 `Android Emulator` are installed.
 
-### `flutter create . --platforms=android,ios` fails
+### `fvm flutter create . --platforms=android,ios` fails
 
 Make sure you are inside the project root directory (the folder containing
 `pubspec.yaml`) before running the command.
@@ -203,3 +206,32 @@ and tap **Request Notification Permission** to trigger the permission dialog.
 Riverpod providers that depend on bootstrap overrides are not hot-reloadable
 in all cases. Use **hot restart** (press `R` in the terminal) to reset the
 full provider graph.
+
+---
+
+## Native checklist after `flutter create` (required)
+
+Because `android/` and `ios/` are generated locally, each machine must confirm
+these settings after generation.
+
+### Android
+
+Edit `android/app/src/main/AndroidManifest.xml` and ensure:
+
+```xml
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+```
+
+### iOS
+
+Edit `ios/Runner/Info.plist` and ensure:
+
+```xml
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>Location is used to support safety and context-aware reminders.</string>
+```
+
+Notification permissions are requested at runtime by the app; behavior can vary
+between simulator and physical device.

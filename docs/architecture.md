@@ -1,7 +1,8 @@
 # Architecture — Senior Companion Prototype
 
 This document describes the technical architecture of Group 0 and serves as
-the authoritative guide for developers adding features in Groups 1 through 10.
+the authoritative guide for developers adding features in the next milestones
+(starting with G1).
 
 ---
 
@@ -207,7 +208,7 @@ Concrete implementations live in subfolders of `core/repositories/`:
 core/repositories/
   check_in_repository.dart          ← interface
   local/
-    local_check_in_repository.dart  ← Hive / in-memory implementation
+  local_check_in_repository.dart  ← dedicated local store / in-memory implementation
   remote/
     remote_check_in_repository.dart ← HTTP implementation (future)
 ```
@@ -372,7 +373,8 @@ Never use raw string literals for storage keys outside of `StorageKeys`.
 ### When NOT to use StorageService
 
 Do not store structured entities (medications, events, incidents) in
-SharedPreferences. Use a Hive box or in-memory list in your local repository
+SharedPreferences. Use a dedicated local store (Hive planned in G1) or
+in-memory list in your local repository
 implementation for those cases.
 
 ---
@@ -704,7 +706,7 @@ No other file needs to change.
 
 ## 14. Known prototype limitations
 
-| Limitation | Location | Fix in group |
+| Limitation | Location | Target milestone |
 |---|---|---|
 | `homeDataProvider` increments launch count on every invalidation | `home_providers.dart` | G1 |
 | Session is always null on first launch — no real auth | `splash_screen.dart` | G1 |
@@ -712,5 +714,5 @@ No other file needs to change.
 | No structured local entity storage (Hive not added yet) | `pubspec.yaml` | G1 |
 | No dark theme | `app_theme.dart` | G8 |
 | `AppSession.toJson/fromJson` is manual — no codegen | `app_session.dart` | G1 |
-| Dio is configured but never used | `networking/` | G7+ |
-| `test/` only covers utilities — no widget or integration tests | `test/` | G10 |
+| Dio is configured but never used | `networking/` | Later API milestone |
+| Widget/bootstrap routing tests need expansion over time | `test/` | Iterative |

@@ -16,6 +16,10 @@ Included:
 - Mock/local repositories with Riverpod injection
 - Logging, structured errors, and lightweight app event bus
 - Placeholder screens for Splash/Home/Senior/Guardian/Settings
+- Explicit local storage policy:
+  - `SharedPreferences` for preferences/session flags only
+  - structured entities (events/timeline/medications/incidents) must move to
+    a dedicated local store (Hive planned for G1)
 
 Not included:
 - Backend/server setup
@@ -62,6 +66,17 @@ fvm flutter run --dart-define=APP_ENV=dev
 ```
 
 Valid values: `dev`, `staging`, `prod`.
+
+## Native platform note (important)
+
+This repository does not commit `android/` and `ios/` folders. After:
+
+```bash
+fvm flutter create . --platforms=android,ios
+```
+
+apply the native checklist in `docs/setup.md` before expecting notification and
+location permission behavior to match physical devices.
 
 ## Project structure
 
