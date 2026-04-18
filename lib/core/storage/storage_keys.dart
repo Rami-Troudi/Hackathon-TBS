@@ -4,4 +4,5 @@ class StorageKeys {
   static const launchCount = 'launch_count';
   static const notificationsEnabled = 'notifications_enabled';
   static const demoSeedVersion = 'demo_seed_version';
+  static const guardianAlertStates = 'guardian_alert_states';
 }

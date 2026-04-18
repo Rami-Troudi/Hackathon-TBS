@@ -5,7 +5,13 @@ import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/features/check_in/check_in_screen.dart';
 import 'package:senior_companion/features/onboarding/profile_selection_screen.dart';
 import 'package:senior_companion/features/onboarding/role_selection_screen.dart';
-import 'package:senior_companion/features/guardian/guardian_home_placeholder_screen.dart';
+import 'package:senior_companion/features/guardian/guardian_alerts_screen.dart';
+import 'package:senior_companion/features/guardian/guardian_check_in_screen.dart';
+import 'package:senior_companion/features/guardian/guardian_home_screen.dart';
+import 'package:senior_companion/features/guardian/guardian_incident_screen.dart';
+import 'package:senior_companion/features/guardian/guardian_medication_screen.dart';
+import 'package:senior_companion/features/guardian/guardian_profile_screen.dart';
+import 'package:senior_companion/features/guardian/guardian_timeline_screen.dart';
 import 'package:senior_companion/features/home/home_screen.dart';
 import 'package:senior_companion/features/incident/incident_confirmation_screen.dart';
 import 'package:senior_companion/features/medication/medication_screen.dart';
@@ -65,7 +71,37 @@ GoRouter buildAppRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.guardianHome,
         name: 'guardian-home',
-        builder: (_, __) => const GuardianHomePlaceholderScreen(),
+        builder: (_, __) => const GuardianHomeScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianAlerts,
+        name: 'guardian-alerts',
+        builder: (_, __) => const GuardianAlertsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianTimeline,
+        name: 'guardian-timeline',
+        builder: (_, __) => const GuardianTimelineScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianCheckIns,
+        name: 'guardian-check-ins',
+        builder: (_, __) => const GuardianCheckInScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianMedication,
+        name: 'guardian-medication',
+        builder: (_, __) => const GuardianMedicationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianIncidents,
+        name: 'guardian-incidents',
+        builder: (_, __) => const GuardianIncidentScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianProfile,
+        name: 'guardian-profile',
+        builder: (_, __) => const GuardianProfileScreen(),
       ),
       GoRoute(
         path: AppRoutes.settings,

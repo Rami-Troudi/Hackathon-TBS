@@ -17,7 +17,7 @@ import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 /// The prototype hub screen shown after splash when no active session exists.
 ///
 /// This screen serves two purposes in G0:
-/// 1. **Demo hub** — quick navigation to senior and guardian placeholder screens.
+/// 1. **Demo hub** — quick navigation to senior and guardian experiences.
 /// 2. **Foundation showcase** — demonstrates that every G0 layer is wired
 ///    correctly: FutureProvider, AsyncValue, mock repositories, event bus,
 ///    local notifications, and role persistence.
@@ -279,13 +279,13 @@ class HomeScreen extends ConsumerWidget {
         ElevatedButton.icon(
           onPressed: () => context.push(AppRoutes.seniorHome),
           icon: const Icon(Icons.accessibility_new_outlined),
-          label: const Text('Senior Placeholder'),
+          label: const Text('Senior Home'),
         ),
         Gaps.v8,
         ElevatedButton.icon(
           onPressed: () => context.push(AppRoutes.guardianHome),
           icon: const Icon(Icons.family_restroom_outlined),
-          label: const Text('Guardian Placeholder'),
+          label: const Text('Guardian Dashboard'),
         ),
         Gaps.v24,
 

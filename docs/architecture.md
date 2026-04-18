@@ -1,6 +1,6 @@
-# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3)
+# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4)
 
-This document describes the technical architecture after **Group 3** and serves
+This document describes the technical architecture after **Group 4** and serves
 as the implementation guide for future milestones.
 
 ---
@@ -448,6 +448,51 @@ Senior screens under `features/senior`, `features/check_in`, `features/medicatio
 consume these repositories through Riverpod providers. Guardian summary/timeline updates automatically via existing
 dashboard aggregation over persisted events.
 
+### G4 guardian feature bundle data flow
+
+Group 4 introduces full guardian-facing product flows without changing core source-of-truth rules:
+
+- persisted events (`EventRepository`) remain the canonical history
+- `SeniorStatusEngine` + `LocalDashboardRepository` remain canonical status/snapshot derivation
+- module repositories (`CheckInRepository`, `MedicationRepository`, `IncidentRepository`) remain canonical module state
+- guardian providers aggregate on top of those repositories (no parallel persistence model)
+
+Guardian routes and feature modules:
+
+- `/guardian` — dashboard
+- `/guardian/alerts` — alerts center
+- `/guardian/timeline` — event history with filtering
+- `/guardian/check-ins` — check-in monitoring
+- `/guardian/medication` — medication monitoring
+- `/guardian/incidents` — incident monitoring
+- `/guardian/profile` — senior overview
+
+#### Guardian alerts repository (local-first)
+
+`GuardianAlertRepository` (`LocalGuardianAlertRepository`) derives alerts from
+persisted events and stores only lightweight local alert state
+(`active`/`acknowledged`/`resolved`) in `SharedPreferences`.
+
+Deterministic derivation rules:
+
+1. unresolved confirmed incident -> critical active alert
+2. active emergency incident chain -> critical active alert
+3. unresolved suspected incident -> warning active alert
+4. missed medication today -> warning active alert (or critical when repeated misses escalate)
+5. missed check-in today -> warning active alert (or critical when repeated misses escalate)
+6. 3+ missed routine signals in a day (check-ins + medication) -> critical active alert
+7. incident dismissal -> resolved informational item
+
+#### Guardian timeline filtering
+
+`GuardianTimelineFilter` is a deterministic event-type mapping:
+
+- all
+- check-ins (`checkInCompleted`, `checkInMissed`)
+- medication (`medicationTaken`, `medicationMissed`)
+- incidents (`incidentSuspected`, `incidentConfirmed`, `incidentDismissed`)
+- emergency (`emergencyTriggered`)
+
 ### Demo data reset workflow
 
 Settings exposes developer actions for fast demo iteration:
@@ -594,7 +639,13 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 | `AppRoutes.checkIn` | `/senior/check-in` | `CheckInScreen` |
 | `AppRoutes.medication` | `/senior/medication` | `MedicationScreen` |
 | `AppRoutes.incident` | `/senior/incident` | `IncidentConfirmationScreen` |
-| `AppRoutes.guardianHome` | `/guardian` | `GuardianHomePlaceholderScreen` |
+| `AppRoutes.guardianHome` | `/guardian` | `GuardianHomeScreen` |
+| `AppRoutes.guardianAlerts` | `/guardian/alerts` | `GuardianAlertsScreen` |
+| `AppRoutes.guardianTimeline` | `/guardian/timeline` | `GuardianTimelineScreen` |
+| `AppRoutes.guardianCheckIns` | `/guardian/check-ins` | `GuardianCheckInScreen` |
+| `AppRoutes.guardianMedication` | `/guardian/medication` | `GuardianMedicationScreen` |
+| `AppRoutes.guardianIncidents` | `/guardian/incidents` | `GuardianIncidentScreen` |
+| `AppRoutes.guardianProfile` | `/guardian/profile` | `GuardianProfileScreen` |
 | `AppRoutes.settings` | `/settings` | `SettingsScreen` |
 
 ### Splash routing logic

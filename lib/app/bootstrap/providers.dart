@@ -18,12 +18,14 @@ import 'package:senior_companion/core/repositories/check_in_repository.dart';
 import 'package:senior_companion/core/repositories/dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/event_repository.dart';
+import 'package:senior_companion/core/repositories/guardian_alert_repository.dart';
 import 'package:senior_companion/core/repositories/incident_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_app_session_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_check_in_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_event_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_guardian_alert_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_incident_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_medication_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_preferences_repository.dart';
@@ -171,6 +173,14 @@ final incidentRepositoryProvider = Provider<IncidentRepository>(
     eventRepository: ref.watch(eventRepositoryProvider),
     eventRecorder: ref.watch(appEventRecorderProvider),
     statusEngine: ref.watch(statusEngineProvider),
+  ),
+);
+
+final guardianAlertRepositoryProvider = Provider<GuardianAlertRepository>(
+  (ref) => LocalGuardianAlertRepository(
+    eventRepository: ref.watch(eventRepositoryProvider),
+    statusEngine: ref.watch(statusEngineProvider),
+    storage: ref.watch(storageServiceProvider),
   ),
 );
 

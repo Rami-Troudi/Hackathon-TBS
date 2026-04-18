@@ -10,6 +10,12 @@ class AppRoutes {
   static const medication = '/senior/medication';
   static const incident = '/senior/incident';
   static const guardianHome = '/guardian';
+  static const guardianAlerts = '/guardian/alerts';
+  static const guardianTimeline = '/guardian/timeline';
+  static const guardianCheckIns = '/guardian/check-ins';
+  static const guardianMedication = '/guardian/medication';
+  static const guardianIncidents = '/guardian/incidents';
+  static const guardianProfile = '/guardian/profile';
   static const settings = '/settings';
 
   static String onboardingProfileForRole(AppRole role) {

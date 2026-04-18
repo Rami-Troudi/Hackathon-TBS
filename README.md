@@ -1,8 +1,8 @@
-# Senior Companion - Group 3 Prototype (Senior Feature Bundle)
+# Senior Companion - Group 4 Prototype (Guardian Feature Bundle)
 
-This repository contains **Group 0 + Group 1 + Group 2 + Group 3** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, and real senior-facing check-in/medication/incident flows.
+This repository contains **Group 0 + Group 1 + Group 2 + Group 3 + Group 4** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, real senior-facing check-in/medication/incident flows, and a complete guardian monitoring experience.
 
-## Scope of this foundation (G0 + G1 + G2 + G3)
+## Scope of this foundation (G0 + G1 + G2 + G3 + G4)
 
 Included:
 - Flutter mobile app bootstrap
@@ -29,6 +29,14 @@ Included:
   - daily check-in (`I’m okay` / `I need help`)
   - medication confirmation (`Taken` / `Skip`)
   - incident vigilance and emergency escalation
+- Real guardian event-driven monitoring flows:
+  - `/guardian` dashboard with status, metrics, module cards, and recent important events
+  - `/guardian/alerts` prioritized alerts center with acknowledge/resolve actions
+  - `/guardian/timeline` chronological event history with event-type filtering
+  - `/guardian/check-ins` check-in monitoring
+  - `/guardian/medication` medication adherence monitoring
+  - `/guardian/incidents` incident state/history monitoring
+  - `/guardian/profile` senior monitoring overview
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
   - `Hive` for structured entities (profiles, links, event records, medication plans, future entities)
@@ -125,6 +133,41 @@ Group 3 makes senior flows the primary event source (instead of developer-only g
 All actions publish and persist real events through the existing G2 core (`AppEventRecorder` + `EventRepository`) and immediately affect local status/timeline/dashboard aggregation.
 
 Developer Hub remains available for diagnostics and demo control, but it is no longer the only practical way to generate meaningful product events.
+
+## G4 Guardian Feature Bundle
+
+Group 4 replaces the old guardian placeholder with a real local-first product flow:
+
+- **Dashboard (`/guardian`)**
+  - global status, active alert count, check-in/medication/incident cards
+  - top alerts and recent important events
+  - direct navigation to deeper monitoring modules
+- **Alerts center (`/guardian/alerts`)**
+  - deterministic alert derivation from persisted timeline + status context
+  - severity: `info`, `warning`, `critical`
+  - state: `active`, `acknowledged`, `resolved`
+  - actions: acknowledge, resolve, open timeline, open related monitoring module
+- **Timeline (`/guardian/timeline`)**
+  - real persisted events only (no fake history)
+  - newest-first chronological feed
+  - filter chips: all/check-ins/medication/incidents/emergency
+  - day grouping for fast scan
+- **Monitoring modules**
+  - check-ins: today state + missed/completed trend + recent check-ins
+  - medication: plans + today reminder states + adherence snapshot
+  - incidents: open/resolved summary + suspicious/confirmed/dismissed/emergency history
+- **Senior overview (`/guardian/profile`)**
+  - identity, language, accessibility preferences, linked relationship context, monitoring summary
+
+### Guardian alert derivation rules (local deterministic)
+
+- unresolved confirmed incident -> critical active alert
+- active emergency incident chain -> critical active alert
+- unresolved suspected incident -> warning active alert
+- missed medication today -> warning (critical when repeated routine misses escalate)
+- missed check-in today -> warning (critical when repeated routine misses escalate)
+- repeated missed routine signals (3+ today) -> critical active alert
+- incident dismissed -> resolved info item
 
 ## Demo data reset flow (G1)
 
