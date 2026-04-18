@@ -204,8 +204,7 @@ final class IncidentSuspectedEvent extends AppEvent {
           other.confidenceScore == confidenceScore;
 
   @override
-  int get hashCode =>
-      Object.hash(type, seniorId, happenedAt, confidenceScore);
+  int get hashCode => Object.hash(type, seniorId, happenedAt, confidenceScore);
 
   @override
   String toString() => 'IncidentSuspectedEvent('

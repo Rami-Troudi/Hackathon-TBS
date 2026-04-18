@@ -25,7 +25,9 @@ class PermissionHandlerPermissionService implements PermissionService {
 
   AppPermissionStatus _mapStatus(PermissionStatus status) {
     if (status.isGranted) return AppPermissionStatus.granted;
-    if (status.isPermanentlyDenied) return AppPermissionStatus.permanentlyDenied;
+    if (status.isPermanentlyDenied) {
+      return AppPermissionStatus.permanentlyDenied;
+    }
     if (status.isRestricted) return AppPermissionStatus.restricted;
     if (status.isLimited) return AppPermissionStatus.limited;
     return AppPermissionStatus.denied;

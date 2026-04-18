@@ -112,12 +112,10 @@ class SharedPreferencesStorageService implements StorageService {
       _instance.setString(key, value);
 
   @override
-  Future<bool> setBool(String key, bool value) =>
-      _instance.setBool(key, value);
+  Future<bool> setBool(String key, bool value) => _instance.setBool(key, value);
 
   @override
-  Future<bool> setInt(String key, int value) =>
-      _instance.setInt(key, value);
+  Future<bool> setInt(String key, int value) => _instance.setInt(key, value);
 
   @override
   Future<bool> setDouble(String key, double value) =>

@@ -29,7 +29,8 @@ void main() {
 
         final error = AppErrorMapper.toApiError(exception);
 
-        expect(error.message, equals('SharedPreferences.setString returned false'));
+        expect(error.message,
+            equals('SharedPreferences.setString returned false'));
       });
 
       test('maps userMessage correctly', () {
@@ -129,7 +130,8 @@ void main() {
       test('userMessage is a safe fallback for a plain Exception', () {
         final error = AppErrorMapper.toApiError(Exception('Something failed'));
 
-        expect(error.userMessage, equals('Unexpected error. Please try again.'));
+        expect(
+            error.userMessage, equals('Unexpected error. Please try again.'));
       });
 
       test('message contains the exception toString for a plain Exception', () {
@@ -156,7 +158,8 @@ void main() {
       });
 
       test('code is "unknown" for a RangeError', () {
-        final error = AppErrorMapper.toApiError(RangeError('Index out of range'));
+        final error =
+            AppErrorMapper.toApiError(RangeError('Index out of range'));
 
         expect(error.code, equals('unknown'));
       });

@@ -67,7 +67,8 @@ class DashboardSummary {
       missedMedications: missedMedications ?? this.missedMedications,
       openIncidents: openIncidents ?? this.openIncidents,
       lastCheckInAt: lastCheckInAt ?? this.lastCheckInAt,
-      nextScheduledReminder: nextScheduledReminder ?? this.nextScheduledReminder,
+      nextScheduledReminder:
+          nextScheduledReminder ?? this.nextScheduledReminder,
     );
   }
 

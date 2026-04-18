@@ -1,8 +1,8 @@
-# Senior Companion - Group 0 Prototype Foundation
+# Senior Companion - Group 1 Prototype Foundation
 
-This repository contains **Group 0** of the Senior Companion mobile prototype: a clean Flutter foundation that future feature groups can build on quickly.
+This repository contains **Group 0 + Group 1** of the Senior Companion mobile prototype: a runnable local-first foundation with prototype onboarding/session flow and structured local entity storage.
 
-## Scope of this foundation
+## Scope of this foundation (G0 + G1)
 
 Included:
 - Flutter mobile app bootstrap
@@ -16,10 +16,13 @@ Included:
 - Mock/local repositories with Riverpod injection
 - Logging, structured errors, and lightweight app event bus
 - Placeholder screens for Splash/Home/Senior/Guardian/Settings
+- Onboarding flow with role + profile selection
+- Prototype local session restoration from splash
+- Hive structured local storage for demo profiles and profile links
+- Idempotent demo seed data (first run + reseed/reset support)
 - Explicit local storage policy:
-  - `SharedPreferences` for preferences/session flags only
-  - structured entities (events/timeline/medications/incidents) must move to
-    a dedicated local store (Hive planned for G1)
+  - `SharedPreferences` for preferences/flags/light session only
+  - `Hive` for structured entities (profiles, links, future feature entities)
 
 Not included:
 - Backend/server setup
@@ -35,6 +38,7 @@ Not included:
 - GoRouter
 - Dio
 - SharedPreferences
+- Hive + hive_flutter
 - flutter_local_notifications
 - permission_handler (lightweight permissions helper)
 
@@ -66,6 +70,27 @@ fvm flutter run --dart-define=APP_ENV=dev
 ```
 
 Valid values: `dev`, `staging`, `prod`.
+
+## Onboarding + session flow (G1)
+
+Startup routing now follows this prototype flow:
+
+1. `/splash`
+2. If local session exists and linked profile is valid:
+   - senior session -> `/senior`
+   - guardian session -> `/guardian`
+3. If no valid session:
+   - `/onboarding/role`
+   - `/onboarding/profile/:role`
+
+The old `/home` screen is kept as a developer demo hub and is no longer the normal first-launch path.
+
+## Demo data reset flow (G1)
+
+From **Settings**:
+- **Clear Session** -> removes current local session and returns to onboarding.
+- **Reseed Demo Data** -> recreates deterministic local demo profiles/links.
+- **Reset Demo Data** -> clears structured demo data + session and returns to onboarding.
 
 ## Native platform note (important)
 
@@ -99,6 +124,7 @@ lib/
     storage/
   features/
     splash/
+    onboarding/
     home/
     senior/
     guardian/

@@ -12,7 +12,6 @@ import 'package:senior_companion/shared/models/dashboard_summary.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 
-
 /// The prototype hub screen shown after splash when no active session exists.
 ///
 /// This screen serves two purposes in G0:

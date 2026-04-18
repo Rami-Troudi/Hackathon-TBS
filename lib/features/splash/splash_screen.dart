@@ -12,9 +12,8 @@ import 'package:senior_companion/shared/models/app_role.dart';
 /// In debug mode this is kept very short to avoid slowing down the dev loop.
 /// In release mode it provides just enough time to feel intentional without
 /// making the user wait.
-const _kSplashMinDuration = kDebugMode
-    ? Duration(milliseconds: 100)
-    : Duration(milliseconds: 800);
+const _kSplashMinDuration =
+    kDebugMode ? Duration(milliseconds: 100) : Duration(milliseconds: 800);
 
 /// The entry point screen shown immediately on app launch.
 ///
@@ -22,7 +21,7 @@ const _kSplashMinDuration = kDebugMode
 /// 1. Display the app brand while initialization completes.
 /// 2. Read the saved session from local storage.
 /// 3. Route the user to the correct experience:
-///    - No session → [AppRoutes.home] (demo hub / role selector)
+///    - No session → [AppRoutes.onboardingRole]
 ///    - Session with senior role → [AppRoutes.seniorHome]
 ///    - Session with guardian role → [AppRoutes.guardianHome]
 ///
@@ -49,6 +48,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
     final sessionRepo = ref.read(appSessionRepositoryProvider);
     final session = await sessionRepo.getSession();
+    String destination;
 
     // Enforce minimum splash visibility.
     final elapsed = stopwatch.elapsed;
@@ -57,21 +57,31 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
       await Future<void>.delayed(remaining);
     }
 
-    if (!mounted) return;
-
     if (session == null) {
-      // No active session — route to the prototype home hub.
-      context.go(AppRoutes.home);
-      return;
+      destination = AppRoutes.onboardingRole;
+    } else {
+      final profileRepository = ref.read(profileRepositoryProvider);
+      final hasProfile = switch (session.activeRole) {
+        AppRole.senior => await profileRepository
+                .getSeniorProfileById(session.activeProfileId) !=
+            null,
+        AppRole.guardian => await profileRepository
+                .getGuardianProfileById(session.activeProfileId) !=
+            null,
+      };
+      if (!hasProfile) {
+        await sessionRepo.clearSession();
+        destination = AppRoutes.onboardingRole;
+      } else {
+        destination = switch (session.activeRole) {
+          AppRole.senior => AppRoutes.seniorHome,
+          AppRole.guardian => AppRoutes.guardianHome,
+        };
+      }
     }
 
-    // Active session found — route directly to the correct experience.
-    switch (session.activeRole) {
-      case AppRole.senior:
-        context.go(AppRoutes.seniorHome);
-      case AppRole.guardian:
-        context.go(AppRoutes.guardianHome);
-    }
+    if (!mounted) return;
+    context.go(destination);
   }
 
   @override

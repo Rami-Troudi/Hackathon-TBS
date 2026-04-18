@@ -106,6 +106,20 @@ fvm flutter run -d chrome               # Web (not a target platform for this pr
 
 ---
 
+## Startup behavior (G1)
+
+On first launch (no local session), the app routes to onboarding:
+
+1. `/onboarding/role`
+2. `/onboarding/profile/:role`
+3. local session creation
+4. route to `/senior` or `/guardian`
+
+If a valid local session already exists, splash restores it and routes directly
+to the matching role experience.
+
+---
+
 ## Static analysis
 
 ```bash
@@ -161,11 +175,10 @@ fvm flutter clean && fvm flutter pub get
 
 - **No backend required.** The prototype is fully local-first. All repositories
   use mock or local implementations.
-- **Storage policy for G0/G1.** `SharedPreferences` is reserved for
-  preferences/session/flags only. Structured entities (timeline/events/meds/incidents)
-  must use a dedicated local store (Hive planned for G1).
-- **No code generation.** Group 0 does not use `build_runner`, `freezed`, or
-  `json_serializable`. If these are added in a later group, run:
+- **Storage policy for G1.** `SharedPreferences` is reserved for
+  preferences/session/flags only. Structured entities are stored in Hive.
+- **No code generation currently required.** G1 uses manual JSON maps for Hive.
+  If code generation is introduced later (`hive_generator`, `freezed`, etc.), run:
   ```bash
   dart run build_runner build --delete-conflicting-outputs
   ```
@@ -175,6 +188,12 @@ fvm flutter clean && fvm flutter pub get
 - **Environment flag.** The `APP_ENV` dart-define is optional. When omitted,
   the app defaults to `dev`. You never need to set it during normal prototype
   development.
+
+- **Demo reset controls.** Use Settings screen actions:
+  - Clear Session
+  - Reseed Demo Data
+  - Reset Demo Data
+  to quickly prepare demo scenarios during hackathon iteration.
 
 ---
 

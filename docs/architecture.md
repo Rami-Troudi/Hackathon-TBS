@@ -1,8 +1,7 @@
 # Architecture — Senior Companion Prototype
 
-This document describes the technical architecture of Group 0 and serves as
-the authoritative guide for developers adding features in the next milestones
-(starting with G1).
+This document describes the technical architecture after **Group 1** and serves
+as the implementation guide for future milestones.
 
 ---
 
@@ -65,7 +64,7 @@ imports from features.
 | `notifications/` | `NotificationService` abstraction + local implementation |
 | `permissions/` | `PermissionService` abstraction + implementation |
 | `repositories/` | Repository interfaces + `local/` implementations |
-| `storage/` | `StorageService` abstraction + `SharedPreferences` implementation |
+| `storage/` | SharedPreferences storage + Hive structured storage bootstrap |
 
 ### `lib/features`
 
@@ -107,11 +106,16 @@ main()
        ├─ DebugAppLogger constructed
        ├─ AppConfig.fromEnvironment(environment)
        ├─ SharedPreferencesStorageService constructed
+       ├─ HiveInitializer constructed
+       ├─ LocalProfileRepository constructed
+       ├─ LocalDemoSeedRepository constructed
        ├─ PermissionHandlerPermissionService constructed
        ├─ LocalNotificationService constructed
        │
        └─ AppInitializer.initialize()
-            ├─ storageService.initialize()   ← awaited
+            ├─ storageService.initialize()      ← awaited
+            ├─ hiveInitializer.initialize()     ← awaited
+            ├─ demoSeedRepository.seedIfNeeded() ← awaited
             └─ notificationService.initialize() ← awaited
        │
        └─ AppBootstrapData returned
@@ -247,7 +251,7 @@ The event bus enables modules to communicate without direct coupling.
 ```dart
 ref.read(appEventBusProvider).publish(
   CheckInCompletedEvent(
-    seniorId: session.user.id,
+    seniorId: session.activeProfileId,
     happenedAt: DateTime.now(),
   ),
 );
@@ -340,8 +344,15 @@ await ref.read(notificationServiceProvider).requestPermission();
 
 ## 7. Storage service
 
-`StorageService` is a thin abstraction over SharedPreferences. Use it only
-for simple flags and preferences — not for entity lists.
+Group 1 storage policy uses two layers:
+
+- `StorageService` (`SharedPreferences`) for lightweight preferences/flags/session.
+- Hive for structured local entities (profiles, links, future feature entities).
+
+### SharedPreferences usage
+
+`StorageService` remains a thin abstraction over SharedPreferences and should be
+used only for simple values.
 
 ```dart
 final storage = ref.read(storageServiceProvider);
@@ -370,12 +381,30 @@ class StorageKeys {
 
 Never use raw string literals for storage keys outside of `StorageKeys`.
 
+### Hive structured entity storage (G1)
+
+Hive is initialized during bootstrap via `HiveInitializer`, and these boxes are
+opened at startup:
+
+- `senior_profiles`
+- `guardian_profiles`
+- `profile_links`
+- `prototype_metadata`
+
+Local repositories use those boxes for profile/session-adjacent prototype data.
+
+### Demo data reset workflow
+
+Settings exposes developer actions for fast demo iteration:
+
+- **Clear Session**: removes local session and returns to onboarding.
+- **Reseed Demo Data**: clears and re-seeds deterministic profile/link data.
+- **Reset Demo Data**: clears structured data and seed marker, then clears session.
+
 ### When NOT to use StorageService
 
-Do not store structured entities (medications, events, incidents) in
-SharedPreferences. Use a dedicated local store (Hive planned in G1) or
-in-memory list in your local repository
-implementation for those cases.
+Do not store structured entities in SharedPreferences. Use Hive-backed local
+repositories instead.
 
 ---
 
@@ -503,6 +532,8 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 | Constant | Path | Screen |
 |---|---|---|
 | `AppRoutes.splash` | `/splash` | `SplashScreen` |
+| `AppRoutes.onboardingRole` | `/onboarding/role` | `RoleSelectionScreen` |
+| `AppRoutes.onboardingProfile` | `/onboarding/profile/:role` | `ProfileSelectionScreen` |
 | `AppRoutes.home` | `/home` | `HomeScreen` (demo hub) |
 | `AppRoutes.seniorHome` | `/senior` | `SeniorHomePlaceholderScreen` |
 | `AppRoutes.guardianHome` | `/guardian` | `GuardianHomePlaceholderScreen` |
@@ -510,16 +541,16 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 
 ### Splash routing logic
 
-The splash screen reads session and preferred role from local storage and
-routes accordingly:
+The splash screen reads the active local session and routes accordingly:
 
 - Session exists with senior role → `/senior`
 - Session exists with guardian role → `/guardian`
-- No session, preferred role is senior → `/senior`
-- No session, preferred role is guardian → `/guardian`
+- No valid session/profile → `/onboarding/role`
 
-In G1, this will be extended with a first-launch role-selection screen before
-any role preference is written.
+From onboarding:
+- Role selected at `/onboarding/role`
+- Demo profile selected at `/onboarding/profile/:role`
+- Session created locally and routed to role experience
 
 ### Navigation
 

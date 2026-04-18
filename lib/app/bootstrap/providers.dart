@@ -11,30 +11,45 @@ import 'package:senior_companion/core/notifications/notification_service.dart';
 import 'package:senior_companion/core/permissions/permission_service.dart';
 import 'package:senior_companion/core/repositories/app_session_repository.dart';
 import 'package:senior_companion/core/repositories/dashboard_repository.dart';
+import 'package:senior_companion/core/repositories/demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_app_session_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_preferences_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_profile_repository.dart';
 import 'package:senior_companion/core/repositories/local/mock_dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/preferences_repository.dart';
+import 'package:senior_companion/core/repositories/profile_repository.dart';
+import 'package:senior_companion/core/storage/hive_initializer.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
 
 final appConfigProvider = Provider<AppConfig>(
-  (_) => throw UnimplementedError('appConfigProvider must be overridden at bootstrap'),
+  (_) => throw UnimplementedError(
+      'appConfigProvider must be overridden at bootstrap'),
 );
 
 final appLoggerProvider = Provider<AppLogger>(
-  (_) => throw UnimplementedError('appLoggerProvider must be overridden at bootstrap'),
+  (_) => throw UnimplementedError(
+      'appLoggerProvider must be overridden at bootstrap'),
 );
 
 final storageServiceProvider = Provider<StorageService>(
-  (_) => throw UnimplementedError('storageServiceProvider must be overridden at bootstrap'),
+  (_) => throw UnimplementedError(
+      'storageServiceProvider must be overridden at bootstrap'),
+);
+
+final hiveInitializerProvider = Provider<HiveInitializer>(
+  (_) => throw UnimplementedError(
+      'hiveInitializerProvider must be overridden at bootstrap'),
 );
 
 final permissionServiceProvider = Provider<PermissionService>(
-  (_) => throw UnimplementedError('permissionServiceProvider must be overridden at bootstrap'),
+  (_) => throw UnimplementedError(
+      'permissionServiceProvider must be overridden at bootstrap'),
 );
 
 final notificationServiceProvider = Provider<NotificationService>(
-  (_) => throw UnimplementedError('notificationServiceProvider must be overridden at bootstrap'),
+  (_) => throw UnimplementedError(
+      'notificationServiceProvider must be overridden at bootstrap'),
 );
 
 final appEventBusProvider = Provider<AppEventBus>((ref) {
@@ -67,6 +82,19 @@ final appSessionRepositoryProvider = Provider<AppSessionRepository>(
 
 final preferencesRepositoryProvider = Provider<PreferencesRepository>(
   (ref) => LocalPreferencesRepository(
+    storage: ref.watch(storageServiceProvider),
+  ),
+);
+
+final profileRepositoryProvider = Provider<ProfileRepository>(
+  (ref) => LocalProfileRepository(
+    hiveInitializer: ref.watch(hiveInitializerProvider),
+  ),
+);
+
+final demoSeedRepositoryProvider = Provider<DemoSeedRepository>(
+  (ref) => LocalDemoSeedRepository(
+    profileRepository: ref.watch(profileRepositoryProvider),
     storage: ref.watch(storageServiceProvider),
   ),
 );

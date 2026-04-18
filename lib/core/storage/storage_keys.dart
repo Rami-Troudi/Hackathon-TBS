@@ -3,4 +3,5 @@ class StorageKeys {
   static const preferredRole = 'preferred_role';
   static const launchCount = 'launch_count';
   static const notificationsEnabled = 'notifications_enabled';
+  static const demoSeedVersion = 'demo_seed_version';
 }

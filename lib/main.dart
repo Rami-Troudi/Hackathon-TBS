@@ -13,7 +13,8 @@ Future<void> main() async {
   final appEnvironment = AppEnvironmentX.fromRaw(
     const String.fromEnvironment('APP_ENV', defaultValue: 'dev'),
   );
-  final bootstrapData = await AppBootstrap.bootstrap(environment: appEnvironment);
+  final bootstrapData =
+      await AppBootstrap.bootstrap(environment: appEnvironment);
   final logger = bootstrapData.logger;
 
   FlutterError.onError = (details) {

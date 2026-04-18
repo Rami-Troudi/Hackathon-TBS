@@ -5,7 +5,6 @@ import 'package:senior_companion/core/repositories/local/local_preferences_repos
 import 'package:senior_companion/core/storage/storage_service.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/models/app_session.dart';
-import 'package:senior_companion/shared/models/app_user.dart';
 
 class _InMemoryStorageService implements StorageService {
   final Map<String, Object> _data = <String, Object>{};
@@ -102,25 +101,47 @@ void main() {
         logger: _NoopLogger(),
       );
 
-      const user = AppUser(
-        id: 'u1',
-        name: 'Demo User',
-        role: AppRole.guardian,
-      );
       final session = AppSession(
-        user: user,
         activeRole: AppRole.guardian,
+        activeProfileId: 'guardian-1',
         startedAt: DateTime.parse('2026-04-18T10:00:00Z'),
       );
 
       await repo.saveSession(session);
       final loaded = await repo.getSession();
       expect(loaded, isNotNull);
-      expect(loaded!.user.id, 'u1');
+      expect(loaded!.activeProfileId, 'guardian-1');
       expect(loaded.activeRole, AppRole.guardian);
 
       await repo.clearSession();
       expect(await repo.getSession(), isNull);
+    });
+
+    test('creates and switches session role', () async {
+      final storage = _InMemoryStorageService();
+      final repo = LocalAppSessionRepository(
+        storage: storage,
+        logger: _NoopLogger(),
+      );
+
+      await repo.createSession(
+        activeRole: AppRole.senior,
+        activeProfileId: 'senior-a',
+      );
+      final created = await repo.getSession();
+      expect(created, isNotNull);
+      expect(created!.activeRole, AppRole.senior);
+      expect(created.activeProfileId, 'senior-a');
+
+      await repo.switchSessionRole(
+        activeRole: AppRole.guardian,
+        activeProfileId: 'guardian-a',
+      );
+      final switched = await repo.getSession();
+      expect(switched, isNotNull);
+      expect(switched!.activeRole, AppRole.guardian);
+      expect(switched.activeProfileId, 'guardian-a');
+      expect(switched.startedAt, created.startedAt);
     });
   });
 }

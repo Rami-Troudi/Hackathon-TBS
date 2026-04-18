@@ -3,6 +3,8 @@ import 'package:senior_companion/app/bootstrap/app_initializer.dart';
 import 'package:senior_companion/core/logging/app_logger.dart';
 import 'package:senior_companion/core/notifications/notification_service.dart';
 import 'package:senior_companion/core/permissions/permission_service.dart';
+import 'package:senior_companion/core/repositories/demo_seed_repository.dart';
+import 'package:senior_companion/core/storage/hive_initializer.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
 
 class _FakeLogger implements AppLogger {
@@ -87,26 +89,64 @@ class _FakeNotificationService implements NotificationService {
       {required String title, required String body}) async {}
 }
 
+class _FakeHiveInitializer extends HiveInitializer {
+  _FakeHiveInitializer()
+      : super(
+          initFunction: () async {},
+        );
+
+  bool initialized = false;
+
+  @override
+  Future<void> initialize() async {
+    initialized = true;
+  }
+}
+
+class _FakeDemoSeedRepository implements DemoSeedRepository {
+  bool seeded = false;
+
+  @override
+  Future<void> resetDemoData() async {}
+
+  @override
+  Future<void> reseedDemoData() async {}
+
+  @override
+  Future<void> seedIfNeeded() async {
+    seeded = true;
+  }
+}
+
 void main() {
-  test('AppInitializer initializes storage and notifications', () async {
+  test('AppInitializer initializes storage, Hive, seeding, and notifications',
+      () async {
     final logger = _FakeLogger();
     final storage = _FakeStorageService();
+    final hiveInitializer = _FakeHiveInitializer();
+    final demoSeedRepository = _FakeDemoSeedRepository();
     final notifications = _FakeNotificationService();
 
     final initializer = AppInitializer(
       logger: logger,
       storageService: storage,
+      hiveInitializer: hiveInitializer,
+      demoSeedRepository: demoSeedRepository,
       notificationService: notifications,
     );
 
     await initializer.initialize();
 
     expect(storage.initialized, isTrue);
+    expect(hiveInitializer.initialized, isTrue);
+    expect(demoSeedRepository.seeded, isTrue);
     expect(notifications.initialized, isTrue);
     expect(
       logger.infoLogs,
       containsAllInOrder(<String>[
         'Initializing storage service',
+        'Initializing Hive structured storage',
+        'Seeding local demo data if needed',
         'Initializing local notification service',
       ]),
     );

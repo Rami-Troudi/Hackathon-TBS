@@ -4,6 +4,7 @@ import 'package:senior_companion/core/logging/app_logger.dart';
 import 'package:senior_companion/core/repositories/app_session_repository.dart';
 import 'package:senior_companion/core/storage/storage_keys.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
+import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/models/app_session.dart';
 
 class LocalAppSessionRepository implements AppSessionRepository {
@@ -45,11 +46,42 @@ class LocalAppSessionRepository implements AppSessionRepository {
         jsonEncode(session.toJson()),
       );
       if (!saved) {
-        logger.warn('LocalAppSessionRepository: storage returned false when saving session');
+        logger.warn(
+            'LocalAppSessionRepository: storage returned false when saving session');
       }
     } catch (error, stack) {
       logger.error('Failed to save session', error, stack);
     }
+  }
+
+  @override
+  Future<void> createSession({
+    required AppRole activeRole,
+    required String activeProfileId,
+  }) async {
+    final session = AppSession(
+      activeRole: activeRole,
+      activeProfileId: activeProfileId,
+      startedAt: DateTime.now().toUtc(),
+    );
+    await saveSession(session);
+  }
+
+  @override
+  Future<void> switchSessionRole({
+    required AppRole activeRole,
+    required String activeProfileId,
+  }) async {
+    final existing = await getSession();
+    if (existing == null) {
+      throw StateError('Cannot switch role without an active session');
+    }
+    final updated = AppSession(
+      activeRole: activeRole,
+      activeProfileId: activeProfileId,
+      startedAt: existing.startedAt,
+    );
+    await saveSession(updated);
   }
 
   @override

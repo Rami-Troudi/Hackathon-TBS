@@ -50,11 +50,14 @@ void main() {
         expect(AppRole.guardian.value, equals('guardian'));
       });
 
-      test('round-trip: fromRaw(role.value) returns the original role — senior', () {
+      test('round-trip: fromRaw(role.value) returns the original role — senior',
+          () {
         expect(AppRoleX.fromRaw(AppRole.senior.value), equals(AppRole.senior));
       });
 
-      test('round-trip: fromRaw(role.value) returns the original role — guardian', () {
+      test(
+          'round-trip: fromRaw(role.value) returns the original role — guardian',
+          () {
         expect(
           AppRoleX.fromRaw(AppRole.guardian.value),
           equals(AppRole.guardian),
