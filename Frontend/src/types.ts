@@ -1,1 +1,1 @@
-export type Screen = 'senior-home' | 'medication' | 'incident' | 'dashboard' | 'alerts'
+export type Screen = 'senior-home' | 'medication' | 'scan-medication' | 'incident' | 'dashboard' | 'alerts' | 'guardian-position'
