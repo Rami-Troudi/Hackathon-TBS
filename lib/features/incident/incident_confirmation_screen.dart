@@ -6,6 +6,7 @@ import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 
 class IncidentConfirmationScreen extends ConsumerWidget {
@@ -41,49 +42,60 @@ class IncidentConfirmationScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Gaps.v8,
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        statusLabel,
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      Gaps.v4,
-                      Text(
-                        'Use these actions to confirm if everything is okay or request urgent help.',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      Gaps.v8,
-                      Text(
-                        'Open suspected: ${data.flowState.openSuspectedIncidents} • Open confirmed: ${data.flowState.openConfirmedIncidents}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
+              AppCard(
+                tone: data.flowState.status == IncidentFlowStatus.emergency ||
+                        data.flowState.status == IncidentFlowStatus.confirmed
+                    ? AppCardTone.danger
+                    : AppCardTone.surface,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      statusLabel,
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    Gaps.v4,
+                    Text(
+                      'Use these actions to confirm if everything is okay or request urgent help.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    Gaps.v8,
+                    Text(
+                      'Open suspected: ${data.flowState.openSuspectedIncidents} • Open confirmed: ${data.flowState.openConfirmedIncidents}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                 ),
               ),
               Gaps.v16,
-              FilledButton(
-                onPressed: () => _triggerEmergency(context, ref, seniorId),
-                child: const Text('Emergency - I need help now'),
+              BigAction(
+                label: 'I need help now',
+                subtitle: 'Start emergency support',
+                icon: Icons.call_outlined,
+                tone: BigActionTone.destructive,
+                onTap: () => _triggerEmergency(context, ref, seniorId),
               ),
               Gaps.v8,
-              FilledButton.tonal(
-                onPressed: () => _confirmIncident(context, ref, seniorId),
-                child: const Text('Confirm incident'),
+              BigAction(
+                label: 'Something happened',
+                subtitle: 'Confirm the incident',
+                icon: Icons.gpp_maybe_outlined,
+                tone: BigActionTone.soft,
+                onTap: () => _confirmIncident(context, ref, seniorId),
               ),
               Gaps.v8,
-              FilledButton.tonal(
+              BigAction(
+                label: 'I\'m okay',
+                subtitle: 'Clear the incident prompt',
+                icon: Icons.verified_outlined,
+                tone: BigActionTone.primary,
+                onTap: () => _dismissIncident(context, ref, seniorId),
+              ),
+              Gaps.v8,
+              TextButton.icon(
                 onPressed: () => _reportSuspicious(context, ref, seniorId),
-                child: const Text('Something seems wrong'),
-              ),
-              Gaps.v8,
-              OutlinedButton(
-                onPressed: () => _dismissIncident(context, ref, seniorId),
-                child: const Text('I\'m okay'),
+                icon: const Icon(Icons.report_gmailerrorred_outlined),
+                label: const Text('Something seems wrong'),
               ),
               Gaps.v16,
               Text(

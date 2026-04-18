@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class FeaturePlaceholderCard extends StatelessWidget {
   const FeaturePlaceholderCard({
@@ -15,9 +16,9 @@ class FeaturePlaceholderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.zero,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
-import 'package:senior_companion/app/theme/app_theme.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/features/guardian/guardian_home_providers.dart';
 import 'package:senior_companion/features/guardian/guardian_ui_helpers.dart';
@@ -12,6 +11,7 @@ import 'package:senior_companion/shared/models/guardian_alert.dart';
 import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class GuardianHomeScreen extends ConsumerWidget {
   const GuardianHomeScreen({super.key});
@@ -88,71 +88,64 @@ class GuardianHomeScreen extends ConsumerWidget {
                 onProfile: () => context.push(AppRoutes.guardianProfile),
               ),
               Gaps.v16,
-              _MonitoringCard(
+              MonitoringCard(
                 title: 'Check-ins',
                 subtitle: _checkInSubtitle(data.checkInState),
-                leadingIcon: Icons.check_circle_outline,
-                actionLabel: 'Open check-in monitoring',
+                icon: Icons.check_circle_outline,
                 onTap: () => context.push(AppRoutes.guardianCheckIns),
               ),
               Gaps.v8,
-              _MonitoringCard(
+              MonitoringCard(
                 title: 'Medication',
                 subtitle:
                     'Taken ${data.todayMedicationTaken} • Missed ${data.todayMedicationMissed} • Pending ${data.todayMedicationPending}',
-                leadingIcon: Icons.medication_outlined,
-                actionLabel: 'Open medication monitoring',
+                icon: Icons.medication_outlined,
                 onTap: () => context.push(AppRoutes.guardianMedication),
               ),
               Gaps.v8,
-              _MonitoringCard(
+              MonitoringCard(
                 title: 'Incidents',
                 subtitle:
                     'Open suspected ${data.incidentState.openSuspectedIncidents} • Open confirmed ${data.incidentState.openConfirmedIncidents} • ${_incidentLabel(data.incidentState.status)}',
-                leadingIcon: Icons.report_gmailerrorred_outlined,
-                actionLabel: 'Open incident monitoring',
+                icon: Icons.report_gmailerrorred_outlined,
                 onTap: () => context.push(AppRoutes.guardianIncidents),
               ),
               if (data.settings.showHydrationReminders) ...[
                 Gaps.v8,
-                _MonitoringCard(
+                MonitoringCard(
                   title: 'Hydration',
                   subtitle:
                       'Completed ${data.hydrationState.completedCount}/${data.hydrationState.dailyGoalCompletions} • Missed ${data.hydrationState.missedCount}',
-                  leadingIcon: Icons.local_drink_outlined,
-                  actionLabel: 'Open hydration monitoring',
+                  icon: Icons.local_drink_outlined,
                   onTap: () => context.push(AppRoutes.guardianHydration),
                 ),
               ],
               if (data.settings.showNutritionReminders) ...[
                 Gaps.v8,
-                _MonitoringCard(
+                MonitoringCard(
                   title: 'Nutrition',
                   subtitle:
                       'Completed ${data.nutritionState.completedCount}/${data.nutritionState.slots.length} • Missed ${data.nutritionState.missedCount}',
-                  leadingIcon: Icons.restaurant_outlined,
-                  actionLabel: 'Open nutrition monitoring',
+                  icon: Icons.restaurant_outlined,
                   onTap: () => context.push(AppRoutes.guardianNutrition),
                 ),
               ],
               if (data.settings.showLocationUpdates) ...[
                 Gaps.v8,
-                _MonitoringCard(
+                MonitoringCard(
                   title: 'Location',
                   subtitle: data.safeZoneStatus.zoneLabel,
-                  leadingIcon: Icons.my_location_outlined,
-                  actionLabel: 'Open location monitoring',
+                  icon: Icons.my_location_outlined,
                   onTap: () => context.push(AppRoutes.guardianLocation),
                 ),
               ],
               if (data.settings.dailyDigestEnabled ||
                   data.settings.weeklyDigestEnabled) ...[
                 Gaps.v8,
-                _MonitoringCard(
+                MonitoringCard(
                   title: 'Daily digest',
                   subtitle: data.dailySummary.headline,
-                  leadingIcon: Icons.summarize_outlined,
-                  actionLabel: 'Open digest',
+                  icon: Icons.summarize_outlined,
                   onTap: () => context.push(AppRoutes.guardianSummary),
                 ),
               ],
@@ -211,65 +204,42 @@ class _GlobalStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColors = Theme.of(context).extension<AppStatusColors>();
-    final color = switch (status) {
-      SeniorGlobalStatus.ok => statusColors?.ok ?? Colors.green,
-      SeniorGlobalStatus.watch => statusColors?.watch ?? Colors.orange,
-      SeniorGlobalStatus.actionRequired =>
-        statusColors?.actionRequired ?? Colors.red,
-    };
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration:
-                      BoxDecoration(color: color, shape: BoxShape.circle),
-                ),
-                Gaps.h8,
-                Text(
-                  status.label,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w700,
-                      ),
-                ),
-              ],
-            ),
-            Gaps.v4,
-            Text(
-              statusDescription,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            Gaps.v16,
-            Wrap(
-              spacing: AppSpacing.md,
-              runSpacing: AppSpacing.sm,
-              children: [
-                _Metric(
-                    label: 'Pending alerts',
-                    value: pendingAlerts,
-                    highlight: pendingAlerts > 0),
-                _Metric(label: 'Today check-ins', value: todayCheckIns),
-                _Metric(
-                    label: 'Missed meds',
-                    value: missedMedications,
-                    highlight: missedMedications > 0),
-                _Metric(
-                    label: 'Open incidents',
-                    value: openIncidents,
-                    highlight: openIncidents > 0),
-              ],
-            ),
-          ],
-        ),
+    return AppCard(
+      tone: status == SeniorGlobalStatus.actionRequired
+          ? AppCardTone.danger
+          : status == SeniorGlobalStatus.watch
+              ? AppCardTone.warning
+              : AppCardTone.surface,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          StatusPill(status: status),
+          Gaps.v12,
+          Text(
+            statusDescription,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Gaps.v16,
+          Wrap(
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.sm,
+            children: [
+              _Metric(
+                  label: 'Pending alerts',
+                  value: pendingAlerts,
+                  highlight: pendingAlerts > 0),
+              _Metric(label: 'Today check-ins', value: todayCheckIns),
+              _Metric(
+                  label: 'Missed meds',
+                  value: missedMedications,
+                  highlight: missedMedications > 0),
+              _Metric(
+                  label: 'Open incidents',
+                  value: openIncidents,
+                  highlight: openIncidents > 0),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -353,56 +323,6 @@ class _QuickActionRow extends StatelessWidget {
   }
 }
 
-class _MonitoringCard extends StatelessWidget {
-  const _MonitoringCard({
-    required this.title,
-    required this.subtitle,
-    required this.leadingIcon,
-    required this.actionLabel,
-    required this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData leadingIcon;
-  final String actionLabel;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(leadingIcon),
-                Gaps.h8,
-                Text(
-                  title,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ],
-            ),
-            Gaps.v8,
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            Gaps.v8,
-            TextButton(
-              onPressed: onTap,
-              child: Text(actionLabel),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _TopAlertsCard extends StatelessWidget {
   const _TopAlertsCard({
     required this.alerts,
@@ -414,42 +334,34 @@ class _TopAlertsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Top alerts',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: onOpenAlerts,
-                  child: const Text('View all'),
-                ),
-              ],
-            ),
-            if (alerts.isEmpty)
-              Text(
-                'No alerts right now.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              )
-            else
-              ...alerts.map(
-                (alert) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    '${alert.severity.label} • ${alert.title}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionTitle(
+            title: 'Top alerts',
+            actionLabel: 'View all',
+            onAction: onOpenAlerts,
+          ),
+          if (alerts.isEmpty)
+            Text(
+              'No alerts right now.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            )
+          else
+            ...alerts.map(
+              (alert) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Row(
+                  children: [
+                    SeverityChip(severity: alert.severity),
+                    Gaps.h8,
+                    Expanded(child: Text(alert.title)),
+                  ],
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
@@ -466,51 +378,40 @@ class _RecentEventsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Recent important events',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: onOpenTimeline,
-                  child: const Text('Open timeline'),
-                ),
-              ],
-            ),
-            if (events.isEmpty)
-              Text(
-                'No important events yet.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              )
-            else
-              ...events.take(5).map(
-                    (event) => Padding(
-                      padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(iconForEventType(event.type), size: 18),
-                          Gaps.h8,
-                          Expanded(
-                            child: Text(
-                              '${event.type.timelineLabel} • ${formatLocalTime(event.happenedAt)}\n${formatEventDetail(event)}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SectionTitle(
+            title: 'Recent important events',
+            actionLabel: 'Timeline',
+            onAction: onOpenTimeline,
+          ),
+          if (events.isEmpty)
+            Text(
+              'No important events yet.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            )
+          else
+            ...events.take(5).map(
+                  (event) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(iconForEventType(event.type), size: 18),
+                        Gaps.h8,
+                        Expanded(
+                          child: Text(
+                            '${event.type.timelineLabel} • ${formatLocalTime(event.happenedAt)}\n${formatEventDetail(event)}',
+                            style: Theme.of(context).textTheme.bodySmall,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
-          ],
-        ),
+                ),
+        ],
       ),
     );
   }

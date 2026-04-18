@@ -10,6 +10,7 @@ import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class CheckInScreen extends ConsumerWidget {
   const CheckInScreen({super.key});
@@ -40,14 +41,19 @@ class CheckInScreen extends ConsumerWidget {
               Gaps.v8,
               _StateBanner(state: data.checkInState),
               Gaps.v16,
-              FilledButton(
-                onPressed: () => _markOkay(context, ref, seniorId),
-                child: const Text('I\'m okay'),
+              BigAction(
+                label: 'I\'m okay',
+                subtitle: 'Confirm your daily check-in',
+                icon: Icons.favorite_outline,
+                onTap: () => _markOkay(context, ref, seniorId),
               ),
               Gaps.v8,
-              OutlinedButton(
-                onPressed: () => _needHelp(context, ref, seniorId),
-                child: const Text('I need help'),
+              BigAction(
+                label: 'I need help',
+                subtitle: 'Let your family know',
+                icon: Icons.call_outlined,
+                tone: BigActionTone.destructive,
+                onTap: () => _needHelp(context, ref, seniorId),
               ),
               Gaps.v8,
               TextButton(
@@ -170,25 +176,22 @@ class _StateBanner extends StatelessWidget {
         'Window $windowRange was missed. You can still check in now.',
     };
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.check_circle_outline, color: color),
-            Gaps.h8,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: Theme.of(context).textTheme.titleLarge),
-                  Text(detail, style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              ),
+    return AppCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.check_circle_outline, color: color),
+          Gaps.h12,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleLarge),
+                Text(detail, style: Theme.of(context).textTheme.bodyMedium),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

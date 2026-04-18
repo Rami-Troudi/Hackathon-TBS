@@ -4,6 +4,7 @@ import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/features/summary/summary_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class GuardianSummaryScreen extends ConsumerWidget {
   const GuardianSummaryScreen({super.key});
@@ -29,13 +30,11 @@ class GuardianSummaryScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Gaps.v8,
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(
-                    summary.headline,
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+              AppCard(
+                tone: AppCardTone.sage,
+                child: Text(
+                  summary.headline,
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               Gaps.v16,
@@ -77,31 +76,28 @@ class _DigestSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: Theme.of(context).textTheme.titleMedium),
-            Gaps.v8,
-            if (items.isEmpty)
-              Text(emptyLabel)
-            else
-              ...items.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('• '),
-                      Expanded(child: Text(item)),
-                    ],
-                  ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          Gaps.v8,
+          if (items.isEmpty)
+            Text(emptyLabel)
+          else
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• '),
+                    Expanded(child: Text(item)),
+                  ],
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

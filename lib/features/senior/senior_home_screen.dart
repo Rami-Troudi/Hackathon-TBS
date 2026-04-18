@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
-import 'package:senior_companion/app/theme/app_theme.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
@@ -15,6 +14,7 @@ import 'package:senior_companion/shared/models/meal_state.dart';
 import 'package:senior_companion/shared/models/safe_zone_status.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class SeniorHomeScreen extends ConsumerWidget {
   const SeniorHomeScreen({super.key});
@@ -248,50 +248,24 @@ class _StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColors = Theme.of(context).extension<AppStatusColors>();
-    final statusColor = switch (summary.globalStatus) {
-      SeniorGlobalStatus.ok => statusColors?.ok ?? Colors.green,
-      SeniorGlobalStatus.watch => statusColors?.watch ?? Colors.orange,
-      SeniorGlobalStatus.actionRequired =>
-        statusColors?.actionRequired ?? Colors.red,
-    };
-
-    return Card(
-      color: highContrast ? Colors.black : null,
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Row(
-          children: [
-            Container(
-              width: 14,
-              height: 14,
-              decoration: BoxDecoration(
-                color: statusColor,
-                shape: BoxShape.circle,
-              ),
+    return AppCard(
+      tone: highContrast ? AppCardTone.danger : AppCardTone.surface,
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                StatusPill(status: summary.globalStatus),
+                Gaps.v12,
+                Text(
+                  summary.globalStatus.description,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+              ],
             ),
-            Gaps.h8,
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    summary.globalStatus.label,
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: highContrast ? Colors.white : null,
-                        ),
-                  ),
-                  Text(
-                    summary.globalStatus.description,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: highContrast ? Colors.white70 : null,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -308,25 +282,23 @@ class _WellbeingSnapshotCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Wellbeing today',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Gaps.v8,
-            Text(
-              'Hydration: ${hydrationState.completedCount}/${hydrationState.dailyGoalCompletions} completed',
-            ),
-            Text(
-              'Meals: ${nutritionState.completedCount}/${nutritionState.slots.length} completed',
-            ),
-          ],
-        ),
+    return AppCard(
+      tone: AppCardTone.sage,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Wellbeing today',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Gaps.v8,
+          Text(
+            'Hydration: ${hydrationState.completedCount}/${hydrationState.dailyGoalCompletions} completed',
+          ),
+          Text(
+            'Meals: ${nutritionState.completedCount}/${nutritionState.slots.length} completed',
+          ),
+        ],
       ),
     );
   }
@@ -341,25 +313,22 @@ class _SafeZoneStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Safe status',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Gaps.v4,
+          Text(status.zoneLabel),
+          if (status.location != null)
             Text(
-              'Safe status',
-              style: Theme.of(context).textTheme.titleMedium,
+              'Updated ${_formatTime(status.location!.updatedAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            Gaps.v4,
-            Text(status.zoneLabel),
-            if (status.location != null)
-              Text(
-                'Updated ${_formatTime(status.location!.updatedAt)}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -394,51 +363,30 @@ class _PrimaryActionCard extends StatelessWidget {
         'Pending in ${checkInState.windowLabel}. Please confirm your status.',
     };
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Primary daily action',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Gaps.v4,
-            Text(
-              subtitle,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            Gaps.v16,
-            SizedBox(
-              width: double.infinity,
-              height: 132,
-              child: FilledButton.icon(
-                onPressed: onPrimaryAction,
-                icon: const Icon(Icons.favorite_outline),
-                label: const Text('I\'m okay'),
-              ),
-            ),
-            Gaps.v8,
-            SizedBox(
-              width: double.infinity,
-              height: 132,
-              child: FilledButton.icon(
-                onPressed: onHelpAction,
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-                icon: const Icon(Icons.call_outlined),
-                label: const Text('I need help'),
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle(title: 'Today'),
+        Text(
+          subtitle,
+          style: Theme.of(context).textTheme.bodyMedium,
         ),
-      ),
+        Gaps.v12,
+        BigAction(
+          label: 'I\'m okay',
+          subtitle: 'Send today\'s check-in',
+          icon: Icons.favorite_outline,
+          onTap: onPrimaryAction,
+        ),
+        Gaps.v8,
+        BigAction(
+          label: 'I need help',
+          subtitle: 'Alert your family now',
+          icon: Icons.call_outlined,
+          tone: BigActionTone.destructive,
+          onTap: onHelpAction,
+        ),
+      ],
     );
   }
 
@@ -486,34 +434,31 @@ class _NextReminderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Next reminder',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Gaps.v4,
+          if (reminder == null)
             Text(
-              'Next reminder',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Gaps.v4,
-            if (reminder == null)
-              Text(
-                'No pending reminders right now.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              )
-            else
-              Text(
-                '${reminder!.plan.medicationName} (${reminder!.plan.dosageLabel}) at ${reminder!.slotLabel}',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-            Gaps.v4,
+              'No pending reminders right now.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            )
+          else
             Text(
-              'Current reminder intensity: $reminderIntensityLabel',
-              style: Theme.of(context).textTheme.bodySmall,
+              '${reminder!.plan.medicationName} (${reminder!.plan.dosageLabel}) at ${reminder!.slotLabel}',
+              style: Theme.of(context).textTheme.bodyLarge,
             ),
-          ],
-        ),
+          Gaps.v4,
+          Text(
+            'Current reminder intensity: $reminderIntensityLabel',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
       ),
     );
   }
@@ -528,34 +473,31 @@ class _RecentActivityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Recent activity',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Gaps.v8,
+          if (events.isEmpty)
             Text(
-              'Recent activity',
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            Gaps.v8,
-            if (events.isEmpty)
-              Text(
-                'No recent events yet.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              )
-            else
-              ...events.map(
-                (event) => Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: Text(
-                    '${event.type.timelineLabel} • ${_formatTime(event.happenedAt)}',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
+              'No recent events yet.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            )
+          else
+            ...events.map(
+              (event) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: Text(
+                  '${event.type.timelineLabel} • ${_formatTime(event.happenedAt)}',
+                  style: Theme.of(context).textTheme.bodyMedium,
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

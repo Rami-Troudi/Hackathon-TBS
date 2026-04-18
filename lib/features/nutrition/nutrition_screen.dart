@@ -6,6 +6,7 @@ import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/meal_state.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class NutritionScreen extends ConsumerWidget {
   const NutritionScreen({super.key});
@@ -32,13 +33,11 @@ class NutritionScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Gaps.v8,
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(
-                    'Completed ${data.state.completedCount}/${data.state.slots.length} • Missed ${data.state.missedCount} • Pending ${data.state.pendingCount}',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
+              AppCard(
+                tone: AppCardTone.clay,
+                child: Text(
+                  'Completed ${data.state.completedCount}/${data.state.slots.length} • Missed ${data.state.missedCount} • Pending ${data.state.pendingCount}',
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
               Gaps.v16,
@@ -122,36 +121,33 @@ class _MealCard extends StatelessWidget {
       MealSlotStatus.completed => 'Completed',
       MealSlotStatus.missed => 'Missed',
     };
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(meal.mealLabel, style: Theme.of(context).textTheme.titleLarge),
-            Gaps.v4,
-            Text(
-              'Time ${_formatTime(meal.scheduledAt)} • $statusLabel',
-              style: Theme.of(context).textTheme.bodyMedium,
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(meal.mealLabel, style: Theme.of(context).textTheme.titleLarge),
+          Gaps.v4,
+          Text(
+            'Time ${_formatTime(meal.scheduledAt)} • $statusLabel',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Gaps.v12,
+          if (meal.status == MealSlotStatus.pending) ...[
+            FilledButton(
+              onPressed: onDone,
+              child: const Text('Done'),
             ),
             Gaps.v8,
-            if (meal.status == MealSlotStatus.pending) ...[
-              FilledButton(
-                onPressed: onDone,
-                child: const Text('Done'),
-              ),
-              Gaps.v8,
-              OutlinedButton(
-                onPressed: onSkip,
-                child: const Text('Skip'),
-              ),
-            ] else
-              Text(
-                'Recorded at ${_formatTime(meal.resolvedAt ?? meal.scheduledAt)}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
+            OutlinedButton(
+              onPressed: onSkip,
+              child: const Text('Skip'),
+            ),
+          ] else
+            Text(
+              'Recorded at ${_formatTime(meal.resolvedAt ?? meal.scheduledAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
       ),
     );
   }

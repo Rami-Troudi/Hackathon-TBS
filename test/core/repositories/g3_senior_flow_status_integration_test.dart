@@ -132,6 +132,9 @@ class _FakeProfileRepository implements ProfileRepository {
 
 void main() {
   test('dashboard summary changes after real senior flow actions', () async {
+    final now = DateTime.now();
+    final todayNine = DateTime(now.year, now.month, now.day, 9);
+    final todayNineThirty = DateTime(now.year, now.month, now.day, 9, 30);
     final tempDir = await Directory.systemTemp
         .createTemp('senior-companion-g3-dashboard-integration');
     final initializer = HiveInitializer(
@@ -169,7 +172,7 @@ void main() {
           AppSession(
             activeRole: AppRole.senior,
             activeProfileId: 'senior-a',
-            startedAt: DateTime.parse('2026-04-18T08:00:00Z'),
+            startedAt: todayNine.subtract(const Duration(hours: 1)),
           ),
         ),
         profileRepository: profileRepository,
@@ -181,13 +184,13 @@ void main() {
 
     await checkInRepository.markCheckInCompleted(
       'senior-a',
-      now: DateTime(2026, 4, 18, 9, 0),
+      now: todayNine,
     );
     final plans = await medicationRepository.getPlansForSenior('senior-a');
     await medicationRepository.markMedicationMissed(
       'senior-a',
       planId: plans.first.id,
-      now: DateTime(2026, 4, 18, 9, 30),
+      now: todayNineThirty,
     );
 
     final summaryAfterActions =

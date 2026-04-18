@@ -6,6 +6,7 @@ import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/hydration_state.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class HydrationScreen extends ConsumerWidget {
   const HydrationScreen({super.key});
@@ -32,13 +33,11 @@ class HydrationScreen extends ConsumerWidget {
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Gaps.v8,
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Text(
-                    'Completed ${data.state.completedCount}/${data.state.dailyGoalCompletions} • Missed ${data.state.missedCount} • Pending ${data.state.pendingCount}',
-                    style: Theme.of(context).textTheme.bodyLarge,
-                  ),
+              AppCard(
+                tone: AppCardTone.sage,
+                child: Text(
+                  'Completed ${data.state.completedCount}/${data.state.dailyGoalCompletions} • Missed ${data.state.missedCount} • Pending ${data.state.pendingCount}',
+                  style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
               Gaps.v16,
@@ -124,36 +123,33 @@ class _HydrationSlotCard extends StatelessWidget {
       HydrationSlotStatus.completed => 'Completed',
       HydrationSlotStatus.missed => 'Missed',
     };
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(slot.label, style: Theme.of(context).textTheme.titleLarge),
-            Gaps.v4,
-            Text(
-              'Time ${_formatTime(slot.scheduledAt)} • $statusLabel',
-              style: Theme.of(context).textTheme.bodyMedium,
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(slot.label, style: Theme.of(context).textTheme.titleLarge),
+          Gaps.v4,
+          Text(
+            'Time ${_formatTime(slot.scheduledAt)} • $statusLabel',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Gaps.v12,
+          if (slot.status == HydrationSlotStatus.pending) ...[
+            FilledButton(
+              onPressed: onDone,
+              child: const Text('Done'),
             ),
             Gaps.v8,
-            if (slot.status == HydrationSlotStatus.pending) ...[
-              FilledButton(
-                onPressed: onDone,
-                child: const Text('Done'),
-              ),
-              Gaps.v8,
-              OutlinedButton(
-                onPressed: onSkip,
-                child: const Text('Skip'),
-              ),
-            ] else
-              Text(
-                'Recorded at ${_formatTime(slot.resolvedAt ?? slot.scheduledAt)}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-          ],
-        ),
+            OutlinedButton(
+              onPressed: onSkip,
+              child: const Text('Skip'),
+            ),
+          ] else
+            Text(
+              'Recorded at ${_formatTime(slot.resolvedAt ?? slot.scheduledAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
       ),
     );
   }

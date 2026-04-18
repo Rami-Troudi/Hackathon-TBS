@@ -3,14 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
-import 'package:senior_companion/app/theme/app_theme.dart';
 import 'package:senior_companion/features/guardian/guardian_alerts_providers.dart';
 import 'package:senior_companion/features/guardian/guardian_home_providers.dart';
-import 'package:senior_companion/features/guardian/guardian_ui_helpers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/guardian_alert.dart';
 import 'package:senior_companion/shared/models/guardian_alert_state.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class GuardianAlertsScreen extends ConsumerWidget {
   const GuardianAlertsScreen({super.key});
@@ -52,15 +51,17 @@ class GuardianAlertsScreen extends ConsumerWidget {
               ),
               Gaps.v16,
               if (data.alerts.isEmpty)
-                Text(
-                  'No alerts found from local monitoring history.',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                const EmptyStateBlock(
+                  icon: Icons.notifications_none_outlined,
+                  title: 'No alerts right now',
+                  description:
+                      'Local monitoring has not found anything that needs attention.',
                 )
               else
                 ...data.alerts.map(
                   (alert) => Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: _AlertCard(
+                    child: AlertListCard(
                       alert: alert,
                       onAcknowledge: alert.state == GuardianAlertState.active
                           ? () => _acknowledgeAlert(ref, alert.id)
@@ -105,94 +106,5 @@ class GuardianAlertsScreen extends ConsumerWidget {
       GuardianMonitoringDestination.location => AppRoutes.guardianLocation,
       GuardianMonitoringDestination.incidents => AppRoutes.guardianIncidents,
     };
-  }
-}
-
-class _AlertCard extends StatelessWidget {
-  const _AlertCard({
-    required this.alert,
-    required this.onOpenTimeline,
-    required this.onOpenMonitoring,
-    this.onAcknowledge,
-    this.onResolve,
-  });
-
-  final GuardianAlert alert;
-  final VoidCallback onOpenTimeline;
-  final VoidCallback onOpenMonitoring;
-  final VoidCallback? onAcknowledge;
-  final VoidCallback? onResolve;
-
-  @override
-  Widget build(BuildContext context) {
-    final statusColors = Theme.of(context).extension<AppStatusColors>();
-    final severityColor = switch (alert.severity) {
-      GuardianAlertSeverity.info => statusColors?.info ?? Colors.blue,
-      GuardianAlertSeverity.warning => statusColors?.watch ?? Colors.orange,
-      GuardianAlertSeverity.critical =>
-        statusColors?.actionRequired ?? Colors.red,
-    };
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.priority_high_outlined, color: severityColor),
-                Gaps.h8,
-                Expanded(
-                  child: Text(
-                    alert.title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: severityColor,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            Gaps.v4,
-            Text(
-              '${alert.severity.label} • ${alert.state.label} • ${formatLocalDay(alert.happenedAt)} ${formatLocalTime(alert.happenedAt)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            Gaps.v8,
-            Text(
-              alert.explanation,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            Gaps.v8,
-            Row(
-              children: [
-                if (onAcknowledge != null)
-                  TextButton(
-                    onPressed: onAcknowledge,
-                    child: const Text('Acknowledge'),
-                  ),
-                if (onResolve != null)
-                  TextButton(
-                    onPressed: onResolve,
-                    child: const Text('Resolve'),
-                  ),
-              ],
-            ),
-            Row(
-              children: [
-                TextButton(
-                  onPressed: onOpenTimeline,
-                  child: const Text('Open timeline context'),
-                ),
-                TextButton(
-                  onPressed: onOpenMonitoring,
-                  child: const Text('Open monitoring section'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

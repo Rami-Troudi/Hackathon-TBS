@@ -7,6 +7,7 @@ import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class MedicationScreen extends ConsumerWidget {
   const MedicationScreen({super.key});
@@ -140,53 +141,50 @@ class _MedicationReminderCard extends StatelessWidget {
         Theme.of(context).extension<AppStatusColors>()?.watch ?? Colors.orange,
     };
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              reminder.plan.medicationName,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            reminder.plan.medicationName,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          Gaps.v4,
+          Text(
+            '${reminder.plan.dosageLabel} • ${reminder.slotLabel}',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          if (reminder.plan.note != null) ...[
             Gaps.v4,
             Text(
-              '${reminder.plan.dosageLabel} • ${reminder.slotLabel}',
-              style: Theme.of(context).textTheme.bodyMedium,
+              reminder.plan.note!,
+              style: Theme.of(context).textTheme.bodySmall,
             ),
-            if (reminder.plan.note != null) ...[
-              Gaps.v4,
-              Text(
-                reminder.plan.note!,
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-            Gaps.v8,
-            Text(
-              statusLabel,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: statusColor,
-                  ),
-            ),
-            Gaps.v8,
-            if (reminder.status == MedicationReminderStatus.pending) ...[
-              FilledButton(
-                onPressed: onTaken,
-                child: const Text('Taken'),
-              ),
-              Gaps.v8,
-              OutlinedButton(
-                onPressed: onMissed,
-                child: const Text('Skip for now'),
-              ),
-            ] else
-              Text(
-                'Recorded at ${_formatTime(reminder.resolvedAt)}',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
           ],
-        ),
+          Gaps.v8,
+          Text(
+            statusLabel,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: statusColor,
+                ),
+          ),
+          Gaps.v12,
+          if (reminder.status == MedicationReminderStatus.pending) ...[
+            FilledButton(
+              onPressed: onTaken,
+              child: const Text('Taken'),
+            ),
+            Gaps.v8,
+            OutlinedButton(
+              onPressed: onMissed,
+              child: const Text('Skip for now'),
+            ),
+          ] else
+            Text(
+              'Recorded at ${_formatTime(reminder.resolvedAt)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
       ),
     );
   }

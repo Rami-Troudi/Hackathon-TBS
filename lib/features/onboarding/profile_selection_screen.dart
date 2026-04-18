@@ -7,6 +7,7 @@ import 'package:senior_companion/features/onboarding/onboarding_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 class ProfileSelectionScreen extends ConsumerWidget {
   const ProfileSelectionScreen({
@@ -122,14 +123,15 @@ class _ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    return AppCard(
+      onTap: onTap,
+      padding: EdgeInsets.zero,
       child: ListTile(
         contentPadding: const EdgeInsets.all(AppSpacing.md),
         leading: const CircleAvatar(child: Icon(Icons.person_outline)),
         title: Text(profile.title),
         subtitle: Text(profile.subtitle),
         trailing: const Icon(Icons.arrow_forward_ios, size: 18),
-        onTap: onTap,
       ),
     );
   }
