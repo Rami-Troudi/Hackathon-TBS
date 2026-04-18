@@ -71,9 +71,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await ref
         .read(settingsRepositoryProvider)
         .saveSeniorSettings(session.activeProfileId, settings);
-    await ref
-        .read(preferencesRepositoryProvider)
-        .setNotificationsEnabled(settings.notificationsEnabled);
     if (!mounted) return;
     setState(() => _seniorSettings = settings);
   }
@@ -84,9 +81,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await ref
         .read(settingsRepositoryProvider)
         .saveGuardianSettings(session.activeProfileId, settings);
-    await ref
-        .read(preferencesRepositoryProvider)
-        .setNotificationsEnabled(settings.notificationsEnabled);
     if (!mounted) return;
     setState(() => _guardianSettings = settings);
   }

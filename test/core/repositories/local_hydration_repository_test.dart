@@ -11,6 +11,7 @@ import 'package:senior_companion/core/repositories/local/local_hydration_reposit
 import 'package:senior_companion/core/repositories/profile_repository.dart';
 import 'package:senior_companion/core/storage/hive_initializer.dart';
 import 'package:senior_companion/shared/models/guardian_profile.dart';
+import 'package:senior_companion/shared/models/hydration_state.dart';
 import 'package:senior_companion/shared/models/profile_link.dart';
 import 'package:senior_companion/shared/models/senior_profile.dart';
 
@@ -131,6 +132,52 @@ void main() {
 
     expect(state.missedCount, 3);
     expect(missedEvents, hasLength(3));
+
+    await Hive.close();
+    await tempDir.delete(recursive: true);
+  });
+
+  test('can mark hydration completed after an auto-missed slot', () async {
+    final tempDir =
+        await Directory.systemTemp.createTemp('senior-companion-hydration-late');
+    final initializer = HiveInitializer(
+      hive: Hive,
+      initFunction: () async => Hive.init(tempDir.path),
+    );
+    await initializer.initialize();
+
+    final eventRepository = LocalEventRepository(
+      hiveInitializer: initializer,
+      eventMapper: const AppEventMapper(),
+      profileRepository: _FakeProfileRepository(),
+    );
+    final repository = LocalHydrationRepository(
+      eventRepository: eventRepository,
+      eventRecorder: AppEventRecorder(
+        eventBus: AppEventBus(),
+        eventRepository: eventRepository,
+      ),
+    );
+
+    await repository.getTodayState(
+      'senior-a',
+      now: DateTime(2026, 4, 18, 22, 0),
+      reconcileMissedSlots: true,
+    );
+    final completed = await repository.markHydrationCompleted(
+      'senior-a',
+      slotId: 'hydration-morning',
+      now: DateTime(2026, 4, 18, 22, 5),
+    );
+    final state = await repository.getTodayState(
+      'senior-a',
+      now: DateTime(2026, 4, 18, 22, 10),
+      reconcileMissedSlots: false,
+    );
+
+    final morning = state.slots.firstWhere((slot) => slot.id == 'hydration-morning');
+    expect(completed, isTrue);
+    expect(morning.status, HydrationSlotStatus.completed);
 
     await Hive.close();
     await tempDir.delete(recursive: true);

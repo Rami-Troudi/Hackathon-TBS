@@ -83,12 +83,13 @@ class LocalHydrationRepository implements HydrationRepository {
       throw StateError('Unknown hydration slot: $slotId');
     }
 
-    final taken = await _hasHydrationEventToday(
+    final completed = await _hasHydrationEventToday(
       seniorId,
       slotLabel: slot.label,
+      types: const <AppEventType>{AppEventType.hydrationCompleted},
       reference: reference,
     );
-    if (taken) return false;
+    if (completed) return false;
 
     await eventRecorder.publishAndPersist(
       HydrationCompletedEvent(
@@ -113,12 +114,16 @@ class LocalHydrationRepository implements HydrationRepository {
       throw StateError('Unknown hydration slot: $slotId');
     }
 
-    final taken = await _hasHydrationEventToday(
+    final existing = await _hasHydrationEventToday(
       seniorId,
       slotLabel: slot.label,
+      types: const <AppEventType>{
+        AppEventType.hydrationCompleted,
+        AppEventType.hydrationMissed,
+      },
       reference: reference,
     );
-    if (taken) return false;
+    if (existing) return false;
 
     await eventRecorder.publishAndPersist(
       HydrationMissedEvent(
@@ -188,13 +193,16 @@ class LocalHydrationRepository implements HydrationRepository {
   Future<bool> _hasHydrationEventToday(
     String seniorId, {
     required String slotLabel,
+    required Set<AppEventType> types,
     required DateTime reference,
   }) async {
     final events = await _todayHydrationEvents(
       seniorId,
       reference: reference,
     );
-    return events.any((event) => event.payload['slotLabel'] == slotLabel);
+    return events.any(
+      (event) => event.payload['slotLabel'] == slotLabel && types.contains(event.type),
+    );
   }
 
   _HydrationSlotDef? _findSlot(String slotId, DateTime reference) {

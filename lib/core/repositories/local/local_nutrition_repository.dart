@@ -82,6 +82,7 @@ class LocalNutritionRepository implements NutritionRepository {
     final existing = await _hasMealEventToday(
       seniorId,
       mealLabel: meal.label,
+      types: const <AppEventType>{AppEventType.mealCompleted},
       reference: reference,
     );
     if (existing) return false;
@@ -111,6 +112,10 @@ class LocalNutritionRepository implements NutritionRepository {
     final existing = await _hasMealEventToday(
       seniorId,
       mealLabel: meal.label,
+      types: const <AppEventType>{
+        AppEventType.mealCompleted,
+        AppEventType.mealMissed,
+      },
       reference: reference,
     );
     if (existing) return false;
@@ -183,13 +188,16 @@ class LocalNutritionRepository implements NutritionRepository {
   Future<bool> _hasMealEventToday(
     String seniorId, {
     required String mealLabel,
+    required Set<AppEventType> types,
     required DateTime reference,
   }) async {
     final events = await _todayMealEvents(
       seniorId,
       reference: reference,
     );
-    return events.any((event) => event.payload['mealLabel'] == mealLabel);
+    return events.any(
+      (event) => event.payload['mealLabel'] == mealLabel && types.contains(event.type),
+    );
   }
 
   _MealDef? _findMeal(String mealId, DateTime reference) {
