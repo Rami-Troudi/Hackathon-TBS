@@ -1,8 +1,8 @@
-# Senior Companion - Group 1 Prototype Foundation
+# Senior Companion - Group 2 Prototype (Event Core)
 
-This repository contains **Group 0 + Group 1** of the Senior Companion mobile prototype: a runnable local-first foundation with prototype onboarding/session flow and structured local entity storage.
+This repository contains **Group 0 + Group 1 + Group 2** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, and a real persisted event/timeline/status core.
 
-## Scope of this foundation (G0 + G1)
+## Scope of this foundation (G0 + G1 + G2)
 
 Included:
 - Flutter mobile app bootstrap
@@ -19,10 +19,15 @@ Included:
 - Onboarding flow with role + profile selection
 - Prototype local session restoration from splash
 - Hive structured local storage for demo profiles and profile links
+- Hive structured local storage for persisted domain event records
 - Idempotent demo seed data (first run + reseed/reset support)
+- Event repository with timeline/history queries (per senior, by type, recent)
+- Deterministic local status engine (`ok` / `watch` / `actionRequired`)
+- Real local dashboard summary aggregation from persisted events
+- Developer event generation controls (publish + persist) and event history clearing
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
-  - `Hive` for structured entities (profiles, links, future feature entities)
+  - `Hive` for structured entities (profiles, links, event records, future feature entities)
 
 Not included:
 - Backend/server setup
@@ -84,6 +89,25 @@ Startup routing now follows this prototype flow:
    - `/onboarding/profile/:role`
 
 The old `/home` screen is kept as a developer demo hub and is no longer the normal first-launch path.
+
+## G2 Event Core (local-first)
+
+Group 2 introduces a reusable local event foundation that future feature groups build on:
+
+- **Persisted event records** in Hive (`event_records`)
+- **Timeline queries** via `EventRepository`
+- **Deterministic status engine** rules:
+  - emergency or unresolved confirmed incident -> `actionRequired`
+  - unresolved suspected incident or single missed routine signal -> `watch`
+  - repeated missed routine signals (3+) -> `actionRequired`
+  - otherwise -> `ok`
+- **Real dashboard summary** derived from persisted events (no hardcoded mock counts)
+
+For prototype validation, open the **Developer Hub** (`/home`) from Senior/Guardian screens and use the event buttons to:
+- generate check-in, medication, incident, and emergency events
+- publish events on the in-app event bus
+- persist events locally
+- clear local event history for the active senior context
 
 ## Demo data reset flow (G1)
 

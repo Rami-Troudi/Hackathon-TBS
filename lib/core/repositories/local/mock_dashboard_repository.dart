@@ -16,7 +16,7 @@ class MockDashboardRepository implements DashboardRepository {
   final AppLogger logger;
 
   @override
-  Future<DashboardSummary> fetchDashboardSummary() async {
+  Future<DashboardSummary> fetchDashboardSummary({String? seniorId}) async {
     logger.debug('MockDashboardRepository: loading mock dashboard summary');
     await Future<void>.delayed(_kMockDelay);
 

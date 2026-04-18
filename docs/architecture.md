@@ -1,6 +1,6 @@
 # Architecture — Senior Companion Prototype
 
-This document describes the technical architecture after **Group 1** and serves
+This document describes the technical architecture after **Group 2** and serves
 as the implementation guide for future milestones.
 
 ---
@@ -58,7 +58,7 @@ imports from features.
 |---|---|
 | `config/` | Environment-aware app configuration |
 | `errors/` | `AppException` + `AppErrorMapper` |
-| `events/` | Sealed `AppEvent` hierarchy + `AppEventBus` |
+| `events/` | Sealed `AppEvent` hierarchy, `AppEventBus`, persisted event mapping, status engine |
 | `logging/` | `AppLogger` abstraction + `DebugAppLogger` |
 | `networking/` | Dio client + `ApiClient.guard()` + error mapping |
 | `notifications/` | `NotificationService` abstraction + local implementation |
@@ -236,9 +236,22 @@ To switch to a remote implementation later, change only this one line.
 ### Rules
 
 - Features depend on the **interface**, never on a concrete class.
-- Local implementations use `StorageService` or in-memory `List` for the prototype.
+- Local implementations use `StorageService`, Hive, or in-memory lists for the prototype.
 - Mock implementations must use `_kMockDelay` before returning data so that
   loading states are always exercised in the UI.
+
+### G2 event repository baseline
+
+Group 2 adds a reusable local-first event core:
+
+- `EventRepository` interface in `core/repositories/event_repository.dart`
+- `LocalEventRepository` backed by Hive `event_records` box
+- timeline/history query methods:
+  - per senior
+  - by event type
+  - recent events (newest first)
+  - guardian-linked seniors
+- explicit `AppEvent -> PersistedEventRecord` mapping via `AppEventMapper`
 
 ---
 
@@ -249,13 +262,17 @@ The event bus enables modules to communicate without direct coupling.
 ### Publishing an event
 
 ```dart
-ref.read(appEventBusProvider).publish(
+await ref.read(appEventRecorderProvider).publishAndPersist(
   CheckInCompletedEvent(
     seniorId: session.activeProfileId,
     happenedAt: DateTime.now(),
   ),
+  source: 'developer',
 );
 ```
+
+`AppEventRecorder` is the canonical G2 path for prototype actions that must both
+publish runtime events and persist timeline records.
 
 ### Subscribing to events
 
@@ -290,7 +307,8 @@ class GuardianDashboardNotifier extends AutoDisposeNotifier<DashboardState> {
 
 1. Add the new case to `AppEventType` enum in `app_event.dart`.
 2. Add a new `final class MyNewEvent extends AppEvent` with the relevant fields.
-3. Every exhaustive `switch` in the codebase that handles `AppEvent` will
+3. Extend `AppEventMapper` so the event has a stable persisted payload.
+4. Every exhaustive `switch` in the codebase that handles `AppEvent` will
    produce a compile-time warning until the new case is handled.
 
 ### Rules
@@ -347,7 +365,7 @@ await ref.read(notificationServiceProvider).requestPermission();
 Group 1 storage policy uses two layers:
 
 - `StorageService` (`SharedPreferences`) for lightweight preferences/flags/session.
-- Hive for structured local entities (profiles, links, future feature entities).
+- Hive for structured local entities (profiles, links, event records, future entities).
 
 ### SharedPreferences usage
 
@@ -389,9 +407,24 @@ opened at startup:
 - `senior_profiles`
 - `guardian_profiles`
 - `profile_links`
+- `event_records`
 - `prototype_metadata`
 
 Local repositories use those boxes for profile/session-adjacent prototype data.
+
+### G2 status engine
+
+`SeniorStatusEngine` derives `SeniorGlobalStatus` from persisted events with
+deterministic, explainable rules:
+
+1. emergency event or unresolved confirmed incident -> `actionRequired`
+2. unresolved suspected incident -> `watch` (unless already escalated)
+3. three or more missed routine signals today (missed check-ins + meds) -> `actionRequired`
+4. one or two missed routine signals -> `watch`
+5. otherwise -> `ok`
+
+`LocalDashboardRepository` aggregates these outputs into `DashboardSummary`
+for Home/Guardian views without mock counters.
 
 ### Demo data reset workflow
 

@@ -79,7 +79,7 @@ Supported `APP_ENV` values:
 | `staging` | `https://staging.prototype.local` | Enabled (debug builds) |
 | `prod` | `https://api.prototype.local` | Disabled |
 
-> **Note:** All API URLs are stubs in Group 0. No real network calls are made.
+> **Note:** All API URLs are stubs in Group 0/G1/G2. No real network calls are made.
 > Dio is scaffolded for future use only.
 
 ### Run on a specific device
@@ -149,11 +149,15 @@ Run with verbose output:
 fvm flutter test --reporter expanded
 ```
 
-Current targeted G1 tests:
+Current targeted G2 tests:
 
 - `test/app/bootstrap/app_initializer_test.dart` (bootstrap init path)
 - `test/core/repositories/local_profile_seed_test.dart` (seeding/reset behavior)
 - `test/core/repositories/local_repositories_test.dart` (session/preferences local repos)
+- `test/core/repositories/local_event_repository_test.dart` (event persistence + timeline queries)
+- `test/core/repositories/local_dashboard_repository_test.dart` (summary derivation)
+- `test/core/events/app_event_mapper_test.dart` (runtime-to-storage event mapping)
+- `test/core/events/status_engine_test.dart` (deterministic status rules)
 - `test/features/splash/splash_routing_test.dart` (startup routing)
 
 ---
@@ -182,8 +186,9 @@ fvm flutter clean && fvm flutter pub get
 
 - **No backend required.** The prototype is fully local-first. All repositories
   use mock or local implementations.
-- **Storage policy for G1.** `SharedPreferences` is reserved for
-  preferences/session/flags only. Structured entities are stored in Hive.
+- **Storage policy for G2.** `SharedPreferences` is reserved for
+  preferences/session/flags only. Structured entities are stored in Hive
+  (profiles, profile links, event records).
 - **No code generation currently required.** G1 uses manual JSON maps for Hive.
   If code generation is introduced later (`hive_generator`, `freezed`, etc.), run:
   ```bash
@@ -201,6 +206,9 @@ fvm flutter clean && fvm flutter pub get
   - Reseed Demo Data
   - Reset Demo Data
   to quickly prepare demo scenarios during hackathon iteration.
+- **G2 developer event controls.** Open the Developer Hub (`/home`) from
+  Senior/Guardian screens to generate check-in/medication/incident/emergency
+  events and clear local event history.
 
 ---
 

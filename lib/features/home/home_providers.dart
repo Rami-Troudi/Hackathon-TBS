@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
+import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
 
@@ -16,7 +17,9 @@ class HomeData {
   const HomeData({
     required this.launchCount,
     required this.preferredRole,
+    required this.activeSeniorId,
     required this.dashboardSummary,
+    required this.recentEvents,
   });
 
   /// How many times the app has been launched (incremented on each load).
@@ -26,9 +29,15 @@ class HomeData {
   /// Persisted in local storage and toggleable from the home screen.
   final AppRole preferredRole;
 
+  /// The senior profile currently driving summary/timeline in this session.
+  final String? activeSeniorId;
+
   /// A snapshot of the senior's current monitoring state.
-  /// Sourced from [DashboardRepository] — mock in G0, real in G7+.
+  /// Sourced from the local G2 event aggregation path.
   final DashboardSummary dashboardSummary;
+
+  /// Recent persisted events in newest-first order for quick timeline preview.
+  final List<PersistedEventRecord> recentEvents;
 
   @override
   bool operator ==(Object other) =>
@@ -36,16 +45,26 @@ class HomeData {
       other is HomeData &&
           other.launchCount == launchCount &&
           other.preferredRole == preferredRole &&
-          other.dashboardSummary == dashboardSummary;
+          other.activeSeniorId == activeSeniorId &&
+          other.dashboardSummary == dashboardSummary &&
+          _eventsEqual(other.recentEvents, recentEvents);
 
   @override
-  int get hashCode => Object.hash(launchCount, preferredRole, dashboardSummary);
+  int get hashCode => Object.hash(
+        launchCount,
+        preferredRole,
+        activeSeniorId,
+        dashboardSummary,
+        Object.hashAll(recentEvents),
+      );
 
   @override
   String toString() => 'HomeData('
       'launchCount: $launchCount, '
       'preferredRole: $preferredRole, '
-      'dashboardSummary: $dashboardSummary)';
+      'activeSeniorId: $activeSeniorId, '
+      'dashboardSummary: $dashboardSummary, '
+      'recentEvents: ${recentEvents.length})';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -81,18 +100,41 @@ class HomeData {
 final homeDataProvider = FutureProvider.autoDispose<HomeData>((ref) async {
   final preferencesRepo = ref.watch(preferencesRepositoryProvider);
   final dashboardRepo = ref.watch(dashboardRepositoryProvider);
+  final eventRepository = ref.watch(eventRepositoryProvider);
+  final activeSeniorResolver = ref.watch(activeSeniorResolverProvider);
 
   // Increment and read the launch count in a single operation.
   final launchCount = await preferencesRepo.incrementLaunchCount();
 
-  // These two calls are independent — in the future they could be parallelised
-  // with Future.wait if latency becomes a concern.
+  final activeSeniorId = await activeSeniorResolver.resolveActiveSeniorId();
+
   final preferredRole = await preferencesRepo.getPreferredRole();
-  final dashboardSummary = await dashboardRepo.fetchDashboardSummary();
+  final dashboardSummary = await dashboardRepo.fetchDashboardSummary(
+    seniorId: activeSeniorId,
+  );
+  final recentEvents = activeSeniorId == null
+      ? const <PersistedEventRecord>[]
+      : await eventRepository.fetchRecentEventsForSenior(
+          activeSeniorId,
+          limit: 8,
+        );
 
   return HomeData(
     launchCount: launchCount,
     preferredRole: preferredRole,
+    activeSeniorId: activeSeniorId,
     dashboardSummary: dashboardSummary,
+    recentEvents: recentEvents,
   );
 });
+
+bool _eventsEqual(
+  List<PersistedEventRecord> left,
+  List<PersistedEventRecord> right,
+) {
+  if (left.length != right.length) return false;
+  for (var i = 0; i < left.length; i += 1) {
+    if (left[i] != right[i]) return false;
+  }
+  return true;
+}

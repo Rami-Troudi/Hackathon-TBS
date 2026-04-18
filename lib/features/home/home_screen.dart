@@ -5,10 +5,12 @@ import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/app/theme/app_theme.dart';
 import 'package:senior_companion/core/events/app_event.dart';
+import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/features/home/home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
+import 'package:senior_companion/shared/models/notification_level.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 
@@ -46,17 +48,104 @@ class HomeScreen extends ConsumerWidget {
     ref.invalidate(homeDataProvider);
   }
 
-  static void _publishExampleEvent(WidgetRef ref, BuildContext context) {
-    ref.read(appEventBusProvider).publish(
-          CheckInCompletedEvent(
-            seniorId: 'demo-senior',
-            happenedAt: DateTime.now(),
-          ),
+  static Future<String?> _resolveSeniorId(WidgetRef ref) {
+    return ref.read(activeSeniorResolverProvider).resolveActiveSeniorId();
+  }
+
+  static Future<void> _generateDemoEvent(
+    WidgetRef ref,
+    BuildContext context,
+    AppEventType type,
+  ) async {
+    final seniorId = await _resolveSeniorId(ref);
+    if (seniorId == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active senior context found')),
+      );
+      return;
+    }
+
+    final now = DateTime.now().toUtc();
+    final event = switch (type) {
+      AppEventType.checkInCompleted => CheckInCompletedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+        ),
+      AppEventType.checkInMissed => CheckInMissedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          windowLabel: 'Morning window',
+        ),
+      AppEventType.medicationTaken => MedicationTakenEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          medicationName: 'Aspirin',
+        ),
+      AppEventType.medicationMissed => MedicationMissedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          medicationName: 'Aspirin',
+        ),
+      AppEventType.incidentSuspected => IncidentSuspectedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          confidenceScore: 0.72,
+        ),
+      AppEventType.incidentConfirmed => IncidentConfirmedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+        ),
+      AppEventType.incidentDismissed => IncidentDismissedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+        ),
+      AppEventType.emergencyTriggered => EmergencyTriggeredEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+        ),
+      AppEventType.seniorStatusChanged => SeniorStatusChangedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          newStatus: SeniorGlobalStatus.watch,
+        ),
+      AppEventType.guardianAlertGenerated => GuardianAlertGeneratedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          alertLevel: NotificationLevel.warning,
+        ),
+    };
+
+    await ref.read(appEventRecorderProvider).publishAndPersist(
+          event,
+          source: 'developer',
         );
+    ref.invalidate(homeDataProvider);
+    if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('CheckInCompletedEvent published on the event bus'),
-      ),
+      SnackBar(content: Text('${type.timelineLabel} generated')),
+    );
+  }
+
+  static Future<void> _clearEventHistory(
+    WidgetRef ref,
+    BuildContext context,
+  ) async {
+    final seniorId = await _resolveSeniorId(ref);
+    if (seniorId == null) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active senior context found')),
+      );
+      return;
+    }
+    await ref
+        .read(eventRepositoryProvider)
+        .clearEventHistory(seniorId: seniorId);
+    ref.invalidate(homeDataProvider);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Local event history cleared')),
     );
   }
 
@@ -166,11 +255,20 @@ class HomeScreen extends ConsumerWidget {
           'Role: ${homeData.preferredRole.label}',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
+        Gaps.v4,
+        Text(
+          homeData.activeSeniorId == null
+              ? 'Senior context: unavailable'
+              : 'Senior context: ${homeData.activeSeniorId}',
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
         Gaps.v24,
 
         // ── Status card ─────────────────────────────────────────────────────
         _StatusCard(summary: homeData.dashboardSummary),
         Gaps.v16,
+        _RecentTimelineCard(events: homeData.recentEvents),
+        Gaps.v24,
 
         // ── Navigation ──────────────────────────────────────────────────────
         Text(
@@ -207,9 +305,68 @@ class HomeScreen extends ConsumerWidget {
         ),
         Gaps.v8,
         OutlinedButton.icon(
-          onPressed: () => _publishExampleEvent(ref, context),
-          icon: const Icon(Icons.bolt_outlined),
-          label: const Text('Publish CheckInCompletedEvent'),
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.checkInCompleted),
+          icon: const Icon(Icons.check_circle_outline),
+          label: const Text('Generate Check-in Completed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.checkInMissed),
+          icon: const Icon(Icons.schedule_outlined),
+          label: const Text('Generate Check-in Missed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.medicationTaken),
+          icon: const Icon(Icons.medication_outlined),
+          label: const Text('Generate Medication Taken'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.medicationMissed),
+          icon: const Icon(Icons.medication_liquid_outlined),
+          label: const Text('Generate Medication Missed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.incidentSuspected),
+          icon: const Icon(Icons.report_gmailerrorred_outlined),
+          label: const Text('Generate Incident Suspected'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.incidentConfirmed),
+          icon: const Icon(Icons.gpp_maybe_outlined),
+          label: const Text('Generate Incident Confirmed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.incidentDismissed),
+          icon: const Icon(Icons.verified_outlined),
+          label: const Text('Generate Incident Dismissed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () => _generateDemoEvent(
+            ref,
+            context,
+            AppEventType.emergencyTriggered,
+          ),
+          icon: const Icon(Icons.warning_amber_outlined),
+          label: const Text('Generate Emergency Triggered'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () => _clearEventHistory(ref, context),
+          icon: const Icon(Icons.delete_sweep_outlined),
+          label: const Text('Clear Local Event History'),
         ),
         Gaps.v8,
         OutlinedButton.icon(
@@ -351,5 +508,84 @@ class _MetricChip extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _RecentTimelineCard extends StatelessWidget {
+  const _RecentTimelineCard({required this.events});
+
+  final List<PersistedEventRecord> events;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Recent activity timeline',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            Gaps.v8,
+            if (events.isEmpty)
+              Text(
+                'No persisted events yet. Use developer controls below.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
+            else
+              ...events.map(
+                (event) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.bolt_outlined,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      Gaps.h8,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              event.type.timelineLabel,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            Text(
+                              _eventSubtitle(event),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _eventSubtitle(PersistedEventRecord event) {
+    final happenedAt = event.happenedAt.toLocal();
+    final hh = happenedAt.hour.toString().padLeft(2, '0');
+    final mm = happenedAt.minute.toString().padLeft(2, '0');
+    final details = switch (event.type) {
+      AppEventType.checkInMissed =>
+        event.payload['windowLabel'] as String? ?? 'window missed',
+      AppEventType.medicationTaken ||
+      AppEventType.medicationMissed =>
+        event.payload['medicationName'] as String? ?? 'medication event',
+      AppEventType.incidentSuspected =>
+        'confidence ${(event.payload['confidenceScore'] ?? 0).toString()}',
+      _ => event.source,
+    };
+    return '$hh:$mm • $details';
   }
 }

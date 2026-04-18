@@ -4,19 +4,25 @@ import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_router.dart';
 import 'package:senior_companion/core/config/app_config.dart';
 import 'package:senior_companion/core/events/app_event_bus.dart';
+import 'package:senior_companion/core/events/app_event_mapper.dart';
+import 'package:senior_companion/core/events/app_event_recorder.dart';
+import 'package:senior_companion/core/events/status_engine.dart';
 import 'package:senior_companion/core/logging/app_logger.dart';
 import 'package:senior_companion/core/networking/api_client.dart';
 import 'package:senior_companion/core/networking/dio_provider.dart';
 import 'package:senior_companion/core/notifications/notification_service.dart';
 import 'package:senior_companion/core/permissions/permission_service.dart';
+import 'package:senior_companion/core/repositories/active_senior_resolver.dart';
 import 'package:senior_companion/core/repositories/app_session_repository.dart';
 import 'package:senior_companion/core/repositories/dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/demo_seed_repository.dart';
+import 'package:senior_companion/core/repositories/event_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_app_session_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_demo_seed_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_event_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_preferences_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_profile_repository.dart';
-import 'package:senior_companion/core/repositories/local/mock_dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/preferences_repository.dart';
 import 'package:senior_companion/core/repositories/profile_repository.dart';
 import 'package:senior_companion/core/storage/hive_initializer.dart';
@@ -58,6 +64,14 @@ final appEventBusProvider = Provider<AppEventBus>((ref) {
   return bus;
 });
 
+final appEventMapperProvider = Provider<AppEventMapper>(
+  (_) => const AppEventMapper(),
+);
+
+final statusEngineProvider = Provider<SeniorStatusEngine>(
+  (_) => const SeniorStatusEngine(),
+);
+
 final dioProvider = Provider<Dio>((ref) {
   final config = ref.watch(appConfigProvider);
   return buildDioClient(
@@ -92,6 +106,21 @@ final profileRepositoryProvider = Provider<ProfileRepository>(
   ),
 );
 
+final activeSeniorResolverProvider = Provider<ActiveSeniorResolver>(
+  (ref) => ActiveSeniorResolver(
+    appSessionRepository: ref.watch(appSessionRepositoryProvider),
+    profileRepository: ref.watch(profileRepositoryProvider),
+  ),
+);
+
+final eventRepositoryProvider = Provider<EventRepository>(
+  (ref) => LocalEventRepository(
+    hiveInitializer: ref.watch(hiveInitializerProvider),
+    eventMapper: ref.watch(appEventMapperProvider),
+    profileRepository: ref.watch(profileRepositoryProvider),
+  ),
+);
+
 final demoSeedRepositoryProvider = Provider<DemoSeedRepository>(
   (ref) => LocalDemoSeedRepository(
     profileRepository: ref.watch(profileRepositoryProvider),
@@ -100,8 +129,18 @@ final demoSeedRepositoryProvider = Provider<DemoSeedRepository>(
 );
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
-  (ref) => MockDashboardRepository(
+  (ref) => LocalDashboardRepository(
+    eventRepository: ref.watch(eventRepositoryProvider),
+    statusEngine: ref.watch(statusEngineProvider),
+    activeSeniorResolver: ref.watch(activeSeniorResolverProvider),
     logger: ref.watch(appLoggerProvider),
+  ),
+);
+
+final appEventRecorderProvider = Provider<AppEventRecorder>(
+  (ref) => AppEventRecorder(
+    eventBus: ref.watch(appEventBusProvider),
+    eventRepository: ref.watch(eventRepositoryProvider),
   ),
 );
 

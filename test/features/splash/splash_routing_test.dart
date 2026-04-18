@@ -96,7 +96,7 @@ class _FakeSessionRepository implements AppSessionRepository {
 
 class _FakeDashboardRepository implements DashboardRepository {
   @override
-  Future<DashboardSummary> fetchDashboardSummary() async {
+  Future<DashboardSummary> fetchDashboardSummary({String? seniorId}) async {
     return DashboardSummary(
       globalStatus: SeniorGlobalStatus.ok,
       pendingAlerts: 0,
