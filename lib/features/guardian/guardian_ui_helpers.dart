@@ -22,6 +22,15 @@ String formatEventDetail(PersistedEventRecord event) => switch (event.type) {
       AppEventType.medicationTaken ||
       AppEventType.medicationMissed =>
         event.payload['medicationName'] as String? ?? 'Medication update',
+      AppEventType.hydrationCompleted ||
+      AppEventType.hydrationMissed =>
+        event.payload['slotLabel'] as String? ?? 'Hydration update',
+      AppEventType.mealCompleted ||
+      AppEventType.mealMissed =>
+        event.payload['mealLabel'] as String? ?? 'Meal update',
+      AppEventType.safeZoneEntered ||
+      AppEventType.safeZoneExited =>
+        event.payload['zoneName'] as String? ?? 'Safe-zone update',
       AppEventType.incidentSuspected => _incidentConfidenceLabel(event),
       AppEventType.seniorStatusChanged =>
         event.payload['newStatus'] as String? ?? 'Status changed',
@@ -35,10 +44,16 @@ IconData iconForEventType(AppEventType type) => switch (type) {
       AppEventType.checkInMissed => Icons.schedule_outlined,
       AppEventType.medicationTaken => Icons.medication_outlined,
       AppEventType.medicationMissed => Icons.medication_liquid_outlined,
+      AppEventType.hydrationCompleted => Icons.local_drink_outlined,
+      AppEventType.hydrationMissed => Icons.no_drinks_outlined,
+      AppEventType.mealCompleted => Icons.restaurant_outlined,
+      AppEventType.mealMissed => Icons.free_breakfast_outlined,
       AppEventType.incidentSuspected => Icons.report_gmailerrorred_outlined,
       AppEventType.incidentConfirmed => Icons.gpp_maybe_outlined,
       AppEventType.incidentDismissed => Icons.verified_outlined,
       AppEventType.emergencyTriggered => Icons.warning_amber_outlined,
+      AppEventType.safeZoneEntered => Icons.home_outlined,
+      AppEventType.safeZoneExited => Icons.directions_walk_outlined,
       AppEventType.seniorStatusChanged => Icons.monitor_heart_outlined,
       AppEventType.guardianAlertGenerated =>
         Icons.notifications_active_outlined,

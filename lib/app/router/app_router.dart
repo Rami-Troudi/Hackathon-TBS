@@ -12,12 +12,19 @@ import 'package:senior_companion/features/guardian/guardian_incident_screen.dart
 import 'package:senior_companion/features/guardian/guardian_medication_screen.dart';
 import 'package:senior_companion/features/guardian/guardian_profile_screen.dart';
 import 'package:senior_companion/features/guardian/guardian_timeline_screen.dart';
+import 'package:senior_companion/features/hydration/guardian_hydration_screen.dart';
+import 'package:senior_companion/features/hydration/hydration_screen.dart';
 import 'package:senior_companion/features/home/home_screen.dart';
 import 'package:senior_companion/features/incident/incident_confirmation_screen.dart';
+import 'package:senior_companion/features/location/guardian_location_screen.dart';
 import 'package:senior_companion/features/medication/medication_screen.dart';
+import 'package:senior_companion/features/nutrition/guardian_nutrition_screen.dart';
+import 'package:senior_companion/features/nutrition/nutrition_screen.dart';
 import 'package:senior_companion/features/senior/senior_home_screen.dart';
 import 'package:senior_companion/features/settings/settings_screen.dart';
 import 'package:senior_companion/features/splash/splash_screen.dart';
+import 'package:senior_companion/features/summary/guardian_summary_screen.dart';
+import 'package:senior_companion/features/summary/senior_summary_screen.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 
 GoRouter buildAppRouter(Ref ref) {
@@ -69,6 +76,21 @@ GoRouter buildAppRouter(Ref ref) {
         builder: (_, __) => const IncidentConfirmationScreen(),
       ),
       GoRoute(
+        path: AppRoutes.seniorHydration,
+        name: 'senior-hydration',
+        builder: (_, __) => const HydrationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.seniorNutrition,
+        name: 'senior-nutrition',
+        builder: (_, __) => const NutritionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.seniorSummary,
+        name: 'senior-summary',
+        builder: (_, __) => const SeniorSummaryScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.guardianHome,
         name: 'guardian-home',
         builder: (_, __) => const GuardianHomeScreen(),
@@ -102,6 +124,26 @@ GoRouter buildAppRouter(Ref ref) {
         path: AppRoutes.guardianProfile,
         name: 'guardian-profile',
         builder: (_, __) => const GuardianProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianHydration,
+        name: 'guardian-hydration',
+        builder: (_, __) => const GuardianHydrationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianNutrition,
+        name: 'guardian-nutrition',
+        builder: (_, __) => const GuardianNutritionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianLocation,
+        name: 'guardian-location',
+        builder: (_, __) => const GuardianLocationScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianSummary,
+        name: 'guardian-summary',
+        builder: (_, __) => const GuardianSummaryScreen(),
       ),
       GoRoute(
         path: AppRoutes.settings,

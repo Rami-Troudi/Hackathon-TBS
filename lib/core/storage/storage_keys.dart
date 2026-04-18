@@ -5,4 +5,6 @@ class StorageKeys {
   static const notificationsEnabled = 'notifications_enabled';
   static const demoSeedVersion = 'demo_seed_version';
   static const guardianAlertStates = 'guardian_alert_states';
+  static const seniorSettingsPrefix = 'senior_settings_';
+  static const guardianSettingsPrefix = 'guardian_settings_';
 }

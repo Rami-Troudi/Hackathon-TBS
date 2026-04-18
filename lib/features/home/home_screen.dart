@@ -87,6 +87,26 @@ class HomeScreen extends ConsumerWidget {
           happenedAt: now,
           medicationName: 'Aspirin',
         ),
+      AppEventType.hydrationCompleted => HydrationCompletedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          slotLabel: 'Morning hydration',
+        ),
+      AppEventType.hydrationMissed => HydrationMissedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          slotLabel: 'Afternoon hydration',
+        ),
+      AppEventType.mealCompleted => MealCompletedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          mealLabel: 'Lunch',
+        ),
+      AppEventType.mealMissed => MealMissedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          mealLabel: 'Dinner',
+        ),
       AppEventType.incidentSuspected => IncidentSuspectedEvent(
           seniorId: seniorId,
           happenedAt: now,
@@ -103,6 +123,18 @@ class HomeScreen extends ConsumerWidget {
       AppEventType.emergencyTriggered => EmergencyTriggeredEvent(
           seniorId: seniorId,
           happenedAt: now,
+        ),
+      AppEventType.safeZoneEntered => SafeZoneEnteredEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          zoneId: 'zone-home',
+          zoneName: 'Home',
+        ),
+      AppEventType.safeZoneExited => SafeZoneExitedEvent(
+          seniorId: seniorId,
+          happenedAt: now,
+          zoneId: 'zone-home',
+          zoneName: 'Home',
         ),
       AppEventType.seniorStatusChanged => SeniorStatusChangedEvent(
           seniorId: seniorId,
@@ -334,6 +366,34 @@ class HomeScreen extends ConsumerWidget {
         Gaps.v8,
         OutlinedButton.icon(
           onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.hydrationCompleted),
+          icon: const Icon(Icons.local_drink_outlined),
+          label: const Text('Generate Hydration Completed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.hydrationMissed),
+          icon: const Icon(Icons.no_drinks_outlined),
+          label: const Text('Generate Hydration Missed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.mealCompleted),
+          icon: const Icon(Icons.restaurant_outlined),
+          label: const Text('Generate Meal Completed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.mealMissed),
+          icon: const Icon(Icons.free_breakfast_outlined),
+          label: const Text('Generate Meal Missed'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
               _generateDemoEvent(ref, context, AppEventType.incidentSuspected),
           icon: const Icon(Icons.report_gmailerrorred_outlined),
           label: const Text('Generate Incident Suspected'),
@@ -361,6 +421,20 @@ class HomeScreen extends ConsumerWidget {
           ),
           icon: const Icon(Icons.warning_amber_outlined),
           label: const Text('Generate Emergency Triggered'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.safeZoneEntered),
+          icon: const Icon(Icons.home_outlined),
+          label: const Text('Generate Safe-zone Entered'),
+        ),
+        Gaps.v8,
+        OutlinedButton.icon(
+          onPressed: () =>
+              _generateDemoEvent(ref, context, AppEventType.safeZoneExited),
+          icon: const Icon(Icons.directions_walk_outlined),
+          label: const Text('Generate Safe-zone Exited'),
         ),
         Gaps.v8,
         OutlinedButton.icon(
@@ -582,6 +656,15 @@ class _RecentTimelineCard extends StatelessWidget {
       AppEventType.medicationTaken ||
       AppEventType.medicationMissed =>
         event.payload['medicationName'] as String? ?? 'medication event',
+      AppEventType.hydrationCompleted ||
+      AppEventType.hydrationMissed =>
+        event.payload['slotLabel'] as String? ?? 'hydration event',
+      AppEventType.mealCompleted ||
+      AppEventType.mealMissed =>
+        event.payload['mealLabel'] as String? ?? 'meal event',
+      AppEventType.safeZoneEntered ||
+      AppEventType.safeZoneExited =>
+        event.payload['zoneName'] as String? ?? 'safe-zone event',
       AppEventType.incidentSuspected =>
         'confidence ${(event.payload['confidenceScore'] ?? 0).toString()}',
       _ => event.source,

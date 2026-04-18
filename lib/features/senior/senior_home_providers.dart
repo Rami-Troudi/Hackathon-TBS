@@ -2,9 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
+import 'package:senior_companion/shared/models/hydration_state.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
+import 'package:senior_companion/shared/models/meal_state.dart';
+import 'package:senior_companion/shared/models/safe_zone_status.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/models/senior_profile.dart';
+import 'package:senior_companion/shared/models/settings_preferences.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
 
 class SeniorHomeData {
@@ -12,7 +16,11 @@ class SeniorHomeData {
     required this.activeSeniorId,
     required this.profile,
     required this.summary,
+    required this.settings,
     required this.checkInState,
+    required this.hydrationState,
+    required this.nutritionState,
+    required this.safeZoneStatus,
     required this.nextReminder,
     required this.recentEvents,
   });
@@ -20,7 +28,11 @@ class SeniorHomeData {
   final String? activeSeniorId;
   final SeniorProfile? profile;
   final DashboardSummary summary;
+  final SeniorSettingsPreferences settings;
   final CheckInState checkInState;
+  final HydrationState hydrationState;
+  final NutritionState nutritionState;
+  final SafeZoneStatus safeZoneStatus;
   final MedicationReminder? nextReminder;
   final List<PersistedEventRecord> recentEvents;
 }
@@ -32,6 +44,10 @@ final seniorHomeDataProvider =
   final dashboardRepository = ref.watch(dashboardRepositoryProvider);
   final checkInRepository = ref.watch(checkInRepositoryProvider);
   final medicationRepository = ref.watch(medicationRepositoryProvider);
+  final hydrationRepository = ref.watch(hydrationRepositoryProvider);
+  final nutritionRepository = ref.watch(nutritionRepositoryProvider);
+  final safeZoneRepository = ref.watch(safeZoneRepositoryProvider);
+  final settingsRepository = ref.watch(settingsRepositoryProvider);
   final eventRepository = ref.watch(eventRepositoryProvider);
 
   final activeSeniorId = await activeSeniorResolver.resolveActiveSeniorId();
@@ -53,6 +69,17 @@ final seniorHomeDataProvider =
         windowStart: DateTime(now.year, now.month, now.day, 8),
         windowEnd: DateTime(now.year, now.month, now.day, 12),
       ),
+      settings: SeniorSettingsPreferences.defaults(),
+      hydrationState: const HydrationState(
+        slots: <HydrationSlotState>[],
+        dailyGoalCompletions: 3,
+      ),
+      nutritionState: const NutritionState(slots: <MealSlotState>[]),
+      safeZoneStatus: const SafeZoneStatus(
+        location: null,
+        activeZone: null,
+        lastTransitionAt: null,
+      ),
       nextReminder: null,
       recentEvents: const <PersistedEventRecord>[],
     );
@@ -62,10 +89,22 @@ final seniorHomeDataProvider =
   final summary = await dashboardRepository.fetchDashboardSummary(
     seniorId: activeSeniorId,
   );
+  final settings = await settingsRepository.getSeniorSettings(activeSeniorId);
   final checkInState = await checkInRepository.getTodayState(
     activeSeniorId,
     reconcileMissedWindow: true,
   );
+  final hydrationState = await hydrationRepository.getTodayState(
+    activeSeniorId,
+    reconcileMissedSlots: true,
+  );
+  final nutritionState = await nutritionRepository.getTodayState(
+    activeSeniorId,
+    reconcileMissedMeals: true,
+  );
+  await safeZoneRepository.seedDefaultZonesIfNeeded(activeSeniorId);
+  final safeZoneStatus =
+      await safeZoneRepository.getCurrentStatus(activeSeniorId);
   final nextReminder =
       await medicationRepository.getNextPendingReminder(activeSeniorId);
   final recentEvents = await eventRepository.fetchRecentEventsForSenior(
@@ -77,7 +116,11 @@ final seniorHomeDataProvider =
     activeSeniorId: activeSeniorId,
     profile: profile,
     summary: summary,
+    settings: settings,
     checkInState: checkInState,
+    hydrationState: hydrationState,
+    nutritionState: nutritionState,
+    safeZoneStatus: safeZoneStatus,
     nextReminder: nextReminder,
     recentEvents: recentEvents,
   );

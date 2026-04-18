@@ -30,6 +30,9 @@ class AppEventMapper {
         IncidentSuspectedEvent() => EventSeverity.warning,
         CheckInMissedEvent() => EventSeverity.warning,
         MedicationMissedEvent() => EventSeverity.warning,
+        HydrationMissedEvent() => EventSeverity.warning,
+        MealMissedEvent() => EventSeverity.warning,
+        SafeZoneExitedEvent() => EventSeverity.warning,
         GuardianAlertGeneratedEvent(:final alertLevel) =>
           _severityForNotificationLevel(alertLevel),
         SeniorStatusChangedEvent(:final newStatus) => switch (newStatus) {
@@ -59,12 +62,34 @@ class AppEventMapper {
         MedicationMissedEvent(:final medicationName) => <String, dynamic>{
             'medicationName': medicationName
           },
+        HydrationCompletedEvent(:final slotLabel) => <String, dynamic>{
+            'slotLabel': slotLabel
+          },
+        HydrationMissedEvent(:final slotLabel) => <String, dynamic>{
+            'slotLabel': slotLabel
+          },
+        MealCompletedEvent(:final mealLabel) => <String, dynamic>{
+            'mealLabel': mealLabel
+          },
+        MealMissedEvent(:final mealLabel) => <String, dynamic>{
+            'mealLabel': mealLabel
+          },
         IncidentSuspectedEvent(:final confidenceScore) => <String, dynamic>{
             'confidenceScore': confidenceScore
           },
         IncidentConfirmedEvent() => const <String, dynamic>{},
         IncidentDismissedEvent() => const <String, dynamic>{},
         EmergencyTriggeredEvent() => const <String, dynamic>{},
+        SafeZoneEnteredEvent(:final zoneId, :final zoneName) =>
+          <String, dynamic>{
+            'zoneId': zoneId,
+            'zoneName': zoneName,
+          },
+        SafeZoneExitedEvent(:final zoneId, :final zoneName) =>
+          <String, dynamic>{
+            'zoneId': zoneId,
+            'zoneName': zoneName,
+          },
         SeniorStatusChangedEvent(:final newStatus) => <String, dynamic>{
             'newStatus': newStatus.name
           },

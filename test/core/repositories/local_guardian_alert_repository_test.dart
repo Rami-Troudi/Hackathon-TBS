@@ -7,6 +7,7 @@ import 'package:senior_companion/core/repositories/local/local_guardian_alert_re
 import 'package:senior_companion/core/storage/storage_service.dart';
 import 'package:senior_companion/shared/models/guardian_alert.dart';
 import 'package:senior_companion/shared/models/guardian_alert_state.dart';
+import 'package:senior_companion/shared/models/settings_preferences.dart';
 
 class _InMemoryStorageService implements StorageService {
   final Map<String, Object> _store = <String, Object>{};
@@ -277,5 +278,48 @@ void main() {
     );
     final acknowledged = second.firstWhere((item) => item.id == alert.id);
     expect(acknowledged.state, GuardianAlertState.acknowledged);
+  });
+
+  test('applies guardian alert sensitivity to routine escalation', () async {
+    final repository = LocalGuardianAlertRepository(
+      eventRepository: _FakeEventRepository(<PersistedEventRecord>[
+        _record(
+          id: 'evt-checkin-missed',
+          type: AppEventType.checkInMissed,
+          happenedAt: DateTime.parse('2026-04-18T08:00:00Z'),
+          payload: const <String, dynamic>{'windowLabel': 'Morning'},
+        ),
+        _record(
+          id: 'evt-medication-missed',
+          type: AppEventType.medicationMissed,
+          happenedAt: DateTime.parse('2026-04-18T09:00:00Z'),
+          payload: const <String, dynamic>{'medicationName': 'Aspirin'},
+        ),
+      ]),
+      statusEngine: const SeniorStatusEngine(),
+      storage: _InMemoryStorageService(),
+    );
+
+    final lowSensitivity = await repository.fetchAlertsForSenior(
+      'senior-a',
+      now: DateTime.parse('2026-04-18T11:00:00Z'),
+      alertSensitivity: AlertSensitivity.low,
+    );
+    expect(
+      lowSensitivity.any(
+        (alert) => alert.id.startsWith('repeated-missed-routines'),
+      ),
+      isFalse,
+    );
+
+    final highSensitivity = await repository.fetchAlertsForSenior(
+      'senior-a',
+      now: DateTime.parse('2026-04-18T11:00:00Z'),
+      alertSensitivity: AlertSensitivity.high,
+    );
+    final repeated = highSensitivity.firstWhere(
+      (alert) => alert.id.startsWith('repeated-missed-routines'),
+    );
+    expect(repeated.severity, GuardianAlertSeverity.critical);
   });
 }

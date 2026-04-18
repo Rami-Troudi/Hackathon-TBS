@@ -10,10 +10,16 @@ enum AppEventType {
   checkInMissed,
   medicationTaken,
   medicationMissed,
+  hydrationCompleted,
+  hydrationMissed,
+  mealCompleted,
+  mealMissed,
   incidentSuspected,
   incidentConfirmed,
   incidentDismissed,
   emergencyTriggered,
+  safeZoneEntered,
+  safeZoneExited,
   seniorStatusChanged,
   guardianAlertGenerated,
 }
@@ -178,6 +184,130 @@ final class MedicationMissedEvent extends AppEvent {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Wellbeing events
+// ─────────────────────────────────────────────────────────────────────────────
+
+final class HydrationCompletedEvent extends AppEvent {
+  const HydrationCompletedEvent({
+    required super.seniorId,
+    required super.happenedAt,
+    required this.slotLabel,
+  });
+
+  final String slotLabel;
+
+  @override
+  AppEventType get type => AppEventType.hydrationCompleted;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HydrationCompletedEvent &&
+          other.seniorId == seniorId &&
+          other.happenedAt == happenedAt &&
+          other.slotLabel == slotLabel;
+
+  @override
+  int get hashCode => Object.hash(type, seniorId, happenedAt, slotLabel);
+
+  @override
+  String toString() => 'HydrationCompletedEvent('
+      'seniorId: $seniorId, '
+      'happenedAt: $happenedAt, '
+      'slotLabel: $slotLabel)';
+}
+
+final class HydrationMissedEvent extends AppEvent {
+  const HydrationMissedEvent({
+    required super.seniorId,
+    required super.happenedAt,
+    required this.slotLabel,
+  });
+
+  final String slotLabel;
+
+  @override
+  AppEventType get type => AppEventType.hydrationMissed;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is HydrationMissedEvent &&
+          other.seniorId == seniorId &&
+          other.happenedAt == happenedAt &&
+          other.slotLabel == slotLabel;
+
+  @override
+  int get hashCode => Object.hash(type, seniorId, happenedAt, slotLabel);
+
+  @override
+  String toString() => 'HydrationMissedEvent('
+      'seniorId: $seniorId, '
+      'happenedAt: $happenedAt, '
+      'slotLabel: $slotLabel)';
+}
+
+final class MealCompletedEvent extends AppEvent {
+  const MealCompletedEvent({
+    required super.seniorId,
+    required super.happenedAt,
+    required this.mealLabel,
+  });
+
+  final String mealLabel;
+
+  @override
+  AppEventType get type => AppEventType.mealCompleted;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MealCompletedEvent &&
+          other.seniorId == seniorId &&
+          other.happenedAt == happenedAt &&
+          other.mealLabel == mealLabel;
+
+  @override
+  int get hashCode => Object.hash(type, seniorId, happenedAt, mealLabel);
+
+  @override
+  String toString() => 'MealCompletedEvent('
+      'seniorId: $seniorId, '
+      'happenedAt: $happenedAt, '
+      'mealLabel: $mealLabel)';
+}
+
+final class MealMissedEvent extends AppEvent {
+  const MealMissedEvent({
+    required super.seniorId,
+    required super.happenedAt,
+    required this.mealLabel,
+  });
+
+  final String mealLabel;
+
+  @override
+  AppEventType get type => AppEventType.mealMissed;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MealMissedEvent &&
+          other.seniorId == seniorId &&
+          other.happenedAt == happenedAt &&
+          other.mealLabel == mealLabel;
+
+  @override
+  int get hashCode => Object.hash(type, seniorId, happenedAt, mealLabel);
+
+  @override
+  String toString() => 'MealMissedEvent('
+      'seniorId: $seniorId, '
+      'happenedAt: $happenedAt, '
+      'mealLabel: $mealLabel)';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Incident events
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -287,6 +417,78 @@ final class EmergencyTriggeredEvent extends AppEvent {
   @override
   String toString() =>
       'EmergencyTriggeredEvent(seniorId: $seniorId, happenedAt: $happenedAt)';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Safe-zone events
+// ─────────────────────────────────────────────────────────────────────────────
+
+final class SafeZoneEnteredEvent extends AppEvent {
+  const SafeZoneEnteredEvent({
+    required super.seniorId,
+    required super.happenedAt,
+    required this.zoneId,
+    required this.zoneName,
+  });
+
+  final String zoneId;
+  final String zoneName;
+
+  @override
+  AppEventType get type => AppEventType.safeZoneEntered;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SafeZoneEnteredEvent &&
+          other.seniorId == seniorId &&
+          other.happenedAt == happenedAt &&
+          other.zoneId == zoneId &&
+          other.zoneName == zoneName;
+
+  @override
+  int get hashCode => Object.hash(type, seniorId, happenedAt, zoneId, zoneName);
+
+  @override
+  String toString() => 'SafeZoneEnteredEvent('
+      'seniorId: $seniorId, '
+      'happenedAt: $happenedAt, '
+      'zoneId: $zoneId, '
+      'zoneName: $zoneName)';
+}
+
+final class SafeZoneExitedEvent extends AppEvent {
+  const SafeZoneExitedEvent({
+    required super.seniorId,
+    required super.happenedAt,
+    required this.zoneId,
+    required this.zoneName,
+  });
+
+  final String zoneId;
+  final String zoneName;
+
+  @override
+  AppEventType get type => AppEventType.safeZoneExited;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SafeZoneExitedEvent &&
+          other.seniorId == seniorId &&
+          other.happenedAt == happenedAt &&
+          other.zoneId == zoneId &&
+          other.zoneName == zoneName;
+
+  @override
+  int get hashCode => Object.hash(type, seniorId, happenedAt, zoneId, zoneName);
+
+  @override
+  String toString() => 'SafeZoneExitedEvent('
+      'seniorId: $seniorId, '
+      'happenedAt: $happenedAt, '
+      'zoneId: $zoneId, '
+      'zoneName: $zoneName)';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

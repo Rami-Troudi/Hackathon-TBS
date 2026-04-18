@@ -1,6 +1,6 @@
-# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4)
+# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4 + G5)
 
-This document describes the technical architecture after **Group 4** and serves
+This document describes the technical architecture after **Group 5** and serves
 as the implementation guide for future milestones.
 
 ---
@@ -362,10 +362,10 @@ await ref.read(notificationServiceProvider).requestPermission();
 
 ## 7. Storage service
 
-Group 1 + Group 3 storage policy uses two layers:
+Group 1 + Group 3 + Group 5 storage policy uses two layers:
 
 - `StorageService` (`SharedPreferences`) for lightweight preferences/flags/session.
-- Hive for structured local entities (profiles, links, event records, medication plans, future entities).
+- Hive for structured local entities (profiles, links, event records, medication plans, safe zones, location state, future entities).
 
 ### SharedPreferences usage
 
@@ -409,6 +409,8 @@ opened at startup:
 - `profile_links`
 - `event_records`
 - `medication_plans`
+- `safe_zones`
+- `safe_zone_state`
 - `prototype_metadata`
 
 Local repositories use those boxes for profile/session-adjacent prototype data.
@@ -420,9 +422,10 @@ deterministic, explainable rules:
 
 1. emergency event or unresolved confirmed incident -> `actionRequired`
 2. unresolved suspected incident -> `watch` (unless already escalated)
-3. three or more missed routine signals today (missed check-ins + meds) -> `actionRequired`
+3. three or more missed routine signals today (missed check-ins + meds + hydration + meals) -> `actionRequired`
 4. one or two missed routine signals -> `watch`
-5. otherwise -> `ok`
+5. unresolved safe-zone exit state -> at least `watch`
+6. otherwise -> `ok`
 
 `LocalDashboardRepository` aggregates these outputs into `DashboardSummary`
 for Home/Guardian views without mock counters.
@@ -480,8 +483,51 @@ Deterministic derivation rules:
 3. unresolved suspected incident -> warning active alert
 4. missed medication today -> warning active alert (or critical when repeated misses escalate)
 5. missed check-in today -> warning active alert (or critical when repeated misses escalate)
-6. 3+ missed routine signals in a day (check-ins + medication) -> critical active alert
+6. 3+ missed routine signals in a day (check-ins + medication + hydration + meals) -> critical active alert
 7. incident dismissal -> resolved informational item
+
+### G5 settings + wellbeing + safety expansion data flow
+
+Group 5 adds four new local-first modules without changing source-of-truth boundaries:
+
+- `SettingsRepository` (`LocalSettingsRepository`)
+  - persists profile-scoped settings in SharedPreferences
+  - senior settings key prefix: `senior_settings_<id>`
+  - guardian settings key prefix: `guardian_settings_<id>`
+- `HydrationRepository` (`LocalHydrationRepository`)
+  - fixed daily hydration slots
+  - completion/missed reconciliation with explicit grace windows
+  - emits `hydrationCompleted` and `hydrationMissed`
+- `NutritionRepository` (`LocalNutritionRepository`)
+  - breakfast/lunch/dinner slots
+  - completion/missed reconciliation
+  - emits `mealCompleted` and `mealMissed`
+- `SafeZoneRepository` (`LocalSafeZoneRepository`)
+  - Hive-backed safe-zone entities + runtime location state
+  - simulated/manual location updates only
+  - emits `safeZoneEntered` and `safeZoneExited`
+- `SummaryRepository` (`LocalSummaryRepository`)
+  - deterministic daily summary generation for senior and guardian audiences
+  - derives text from persisted timeline + `SeniorStatusEngine` (no AI)
+
+Guardian monitoring expansion in G5:
+
+- `/guardian/hydration`
+- `/guardian/nutrition`
+- `/guardian/location`
+- `/guardian/summary`
+
+Senior experience expansion in G5:
+
+- `/senior/hydration`
+- `/senior/nutrition`
+- `/senior/summary`
+
+`LocalGuardianAlertRepository` now also derives alerts from:
+
+- missed hydration slots
+- missed meals
+- unresolved safe-zone exit state (warning/critical by outside duration)
 
 #### Guardian timeline filtering
 
@@ -490,6 +536,8 @@ Deterministic derivation rules:
 - all
 - check-ins (`checkInCompleted`, `checkInMissed`)
 - medication (`medicationTaken`, `medicationMissed`)
+- wellbeing (`hydrationCompleted`, `hydrationMissed`, `mealCompleted`, `mealMissed`)
+- location (`safeZoneEntered`, `safeZoneExited`)
 - incidents (`incidentSuspected`, `incidentConfirmed`, `incidentDismissed`)
 - emergency (`emergencyTriggered`)
 
@@ -639,6 +687,9 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 | `AppRoutes.checkIn` | `/senior/check-in` | `CheckInScreen` |
 | `AppRoutes.medication` | `/senior/medication` | `MedicationScreen` |
 | `AppRoutes.incident` | `/senior/incident` | `IncidentConfirmationScreen` |
+| `AppRoutes.seniorHydration` | `/senior/hydration` | `HydrationScreen` |
+| `AppRoutes.seniorNutrition` | `/senior/nutrition` | `NutritionScreen` |
+| `AppRoutes.seniorSummary` | `/senior/summary` | `SeniorSummaryScreen` |
 | `AppRoutes.guardianHome` | `/guardian` | `GuardianHomeScreen` |
 | `AppRoutes.guardianAlerts` | `/guardian/alerts` | `GuardianAlertsScreen` |
 | `AppRoutes.guardianTimeline` | `/guardian/timeline` | `GuardianTimelineScreen` |
@@ -646,6 +697,10 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 | `AppRoutes.guardianMedication` | `/guardian/medication` | `GuardianMedicationScreen` |
 | `AppRoutes.guardianIncidents` | `/guardian/incidents` | `GuardianIncidentScreen` |
 | `AppRoutes.guardianProfile` | `/guardian/profile` | `GuardianProfileScreen` |
+| `AppRoutes.guardianHydration` | `/guardian/hydration` | `GuardianHydrationScreen` |
+| `AppRoutes.guardianNutrition` | `/guardian/nutrition` | `GuardianNutritionScreen` |
+| `AppRoutes.guardianLocation` | `/guardian/location` | `GuardianLocationScreen` |
+| `AppRoutes.guardianSummary` | `/guardian/summary` | `GuardianSummaryScreen` |
 | `AppRoutes.settings` | `/settings` | `SettingsScreen` |
 
 ### Splash routing logic
@@ -852,4 +907,5 @@ No other file needs to change.
 | No dark theme | `app_theme.dart` | G8 |
 | `AppSession.toJson/fromJson` remains manual (no codegen) | `app_session.dart` | G2+ |
 | Dio is configured but never used | `networking/` | Later API milestone |
+| Safe-zone location is simulation/manual only (no background tracking) | `local_safe_zone_repository.dart` + location screens | Future optional geo milestone |
 | Widget/bootstrap routing tests need expansion over time | `test/` | Iterative |

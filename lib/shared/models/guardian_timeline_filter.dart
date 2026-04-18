@@ -4,6 +4,8 @@ enum GuardianTimelineFilter {
   all,
   checkIns,
   medication,
+  wellbeing,
+  location,
   incidents,
   emergency,
 }
@@ -13,6 +15,8 @@ extension GuardianTimelineFilterX on GuardianTimelineFilter {
         GuardianTimelineFilter.all => 'All',
         GuardianTimelineFilter.checkIns => 'Check-ins',
         GuardianTimelineFilter.medication => 'Medication',
+        GuardianTimelineFilter.wellbeing => 'Wellbeing',
+        GuardianTimelineFilter.location => 'Location',
         GuardianTimelineFilter.incidents => 'Incidents',
         GuardianTimelineFilter.emergency => 'Emergency',
       };
@@ -26,6 +30,16 @@ extension GuardianTimelineFilterX on GuardianTimelineFilter {
         GuardianTimelineFilter.medication => const <AppEventType>{
             AppEventType.medicationTaken,
             AppEventType.medicationMissed,
+          },
+        GuardianTimelineFilter.wellbeing => const <AppEventType>{
+            AppEventType.hydrationCompleted,
+            AppEventType.hydrationMissed,
+            AppEventType.mealCompleted,
+            AppEventType.mealMissed,
+          },
+        GuardianTimelineFilter.location => const <AppEventType>{
+            AppEventType.safeZoneEntered,
+            AppEventType.safeZoneExited,
           },
         GuardianTimelineFilter.incidents => const <AppEventType>{
             AppEventType.incidentSuspected,

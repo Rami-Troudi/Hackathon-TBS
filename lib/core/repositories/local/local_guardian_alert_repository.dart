@@ -9,6 +9,7 @@ import 'package:senior_companion/core/storage/storage_keys.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
 import 'package:senior_companion/shared/models/guardian_alert.dart';
 import 'package:senior_companion/shared/models/guardian_alert_state.dart';
+import 'package:senior_companion/shared/models/settings_preferences.dart';
 
 class LocalGuardianAlertRepository implements GuardianAlertRepository {
   const LocalGuardianAlertRepository({
@@ -25,6 +26,7 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
   Future<List<GuardianAlert>> fetchAlertsForSenior(
     String seniorId, {
     DateTime? now,
+    AlertSensitivity alertSensitivity = AlertSensitivity.normal,
   }) async {
     final reference = (now ?? DateTime.now()).toLocal();
     final timeline = await eventRepository.fetchTimelineForSenior(
@@ -104,10 +106,34 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
       reference: reference,
       type: AppEventType.checkInMissed,
     );
+    final todayMissedHydration = _latestTodayEvent(
+      timeline,
+      reference: reference,
+      type: AppEventType.hydrationMissed,
+    );
+    final todayMissedMeal = _latestTodayEvent(
+      timeline,
+      reference: reference,
+      type: AppEventType.mealMissed,
+    );
+    final todayMissedHydrationCount = _todayEventCount(
+      timeline,
+      reference: reference,
+      type: AppEventType.hydrationMissed,
+    );
+    final todayMissedMealCount = _todayEventCount(
+      timeline,
+      reference: reference,
+      type: AppEventType.mealMissed,
+    );
 
-    final warningSignalsToday =
-        evaluation.missedMedications + evaluation.missedCheckIns;
-    final missedRoutineSeverity = warningSignalsToday >= 3
+    final warningSignalsToday = evaluation.missedMedications +
+        evaluation.missedCheckIns +
+        todayMissedHydrationCount +
+        todayMissedMealCount;
+    final routineCriticalThreshold =
+        _routineCriticalThreshold(alertSensitivity);
+    final missedRoutineSeverity = warningSignalsToday >= routineCriticalThreshold
         ? GuardianAlertSeverity.critical
         : GuardianAlertSeverity.warning;
 
@@ -147,14 +173,83 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
       );
     }
 
-    if (warningSignalsToday >= 3) {
+    if (todayMissedHydration != null) {
+      final hydrationSeverity = _wellbeingSeverity(
+        missedCount: todayMissedHydrationCount,
+        sensitivity: alertSensitivity,
+      );
+      alerts.add(
+        GuardianAlert(
+          id: 'missed-hydration-${_dayKey(reference)}-$seniorId',
+          seniorId: seniorId,
+          title: 'Hydration routine was missed',
+          explanation:
+              'Hydration reminders missed today: $todayMissedHydrationCount.',
+          happenedAt: todayMissedHydration.happenedAt,
+          severity: hydrationSeverity,
+          state: GuardianAlertState.active,
+          relatedEventType: todayMissedHydration.type,
+          relatedEventId: todayMissedHydration.id,
+          destination: GuardianMonitoringDestination.hydration,
+        ),
+      );
+    }
+
+    if (todayMissedMeal != null) {
+      final mealSeverity = _wellbeingSeverity(
+        missedCount: todayMissedMealCount,
+        sensitivity: alertSensitivity,
+      );
+      alerts.add(
+        GuardianAlert(
+          id: 'missed-meal-${_dayKey(reference)}-$seniorId',
+          seniorId: seniorId,
+          title: 'Meal routine was missed',
+          explanation: 'Meals missed today: $todayMissedMealCount.',
+          happenedAt: todayMissedMeal.happenedAt,
+          severity: mealSeverity,
+          state: GuardianAlertState.active,
+          relatedEventType: todayMissedMeal.type,
+          relatedEventId: todayMissedMeal.id,
+          destination: GuardianMonitoringDestination.nutrition,
+        ),
+      );
+    }
+
+    final safeZoneState = _resolveSafeZoneState(timeline);
+    if (safeZoneState.unresolvedExitEvent != null) {
+      final exitEvent = safeZoneState.unresolvedExitEvent!;
+      final outsideFor = reference.difference(exitEvent.happenedAt.toLocal());
+      final severity = outsideFor >= const Duration(hours: 2)
+          ? GuardianAlertSeverity.critical
+          : GuardianAlertSeverity.warning;
+      alerts.add(
+        GuardianAlert(
+          id: 'safe-zone-outside-$seniorId',
+          seniorId: seniorId,
+          title: severity == GuardianAlertSeverity.critical
+              ? 'Outside safe zone for extended time'
+              : 'Outside safe zone',
+          explanation:
+              'Senior is outside configured safe zones${outsideFor >= const Duration(hours: 2) ? ' for over 2 hours' : ''}.',
+          happenedAt: exitEvent.happenedAt,
+          severity: severity,
+          state: GuardianAlertState.active,
+          relatedEventType: exitEvent.type,
+          relatedEventId: exitEvent.id,
+          destination: GuardianMonitoringDestination.location,
+        ),
+      );
+    }
+
+    if (warningSignalsToday >= routineCriticalThreshold) {
       alerts.add(
         GuardianAlert(
           id: 'repeated-missed-routines-${_dayKey(reference)}-$seniorId',
           seniorId: seniorId,
           title: 'Repeated missed routine signals',
           explanation:
-              '$warningSignalsToday routine signals were missed today (check-ins and medication).',
+              '$warningSignalsToday routine signals were missed today (check-ins, medication, hydration, and meals).',
           happenedAt: reference.toUtc(),
           severity: GuardianAlertSeverity.critical,
           state: GuardianAlertState.active,
@@ -192,6 +287,40 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
     merged.sort(_sortAlerts);
     return merged;
   }
+
+  GuardianAlertSeverity _wellbeingSeverity({
+    required int missedCount,
+    required AlertSensitivity sensitivity,
+  }) {
+    if (missedCount >= _wellbeingCriticalThreshold(sensitivity)) {
+      return GuardianAlertSeverity.critical;
+    }
+    if (missedCount >= _wellbeingWarningThreshold(sensitivity)) {
+      return GuardianAlertSeverity.warning;
+    }
+    return GuardianAlertSeverity.info;
+  }
+
+  int _routineCriticalThreshold(AlertSensitivity sensitivity) =>
+      switch (sensitivity) {
+        AlertSensitivity.low => 4,
+        AlertSensitivity.normal => 3,
+        AlertSensitivity.high => 2,
+      };
+
+  int _wellbeingWarningThreshold(AlertSensitivity sensitivity) =>
+      switch (sensitivity) {
+        AlertSensitivity.low => 3,
+        AlertSensitivity.normal => 2,
+        AlertSensitivity.high => 1,
+      };
+
+  int _wellbeingCriticalThreshold(AlertSensitivity sensitivity) =>
+      switch (sensitivity) {
+        AlertSensitivity.low => 4,
+        AlertSensitivity.normal => 3,
+        AlertSensitivity.high => 2,
+      };
 
   @override
   Future<void> acknowledgeAlert(String alertId) async {
@@ -255,6 +384,21 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
       }
     }
     return null;
+  }
+
+  int _todayEventCount(
+    List<PersistedEventRecord> timeline, {
+    required DateTime reference,
+    required AppEventType type,
+  }) {
+    var count = 0;
+    for (final event in timeline) {
+      if (event.type != type) continue;
+      if (_isSameLocalDay(event.happenedAt, reference)) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   bool _isSameLocalDay(DateTime timestamp, DateTime reference) {
@@ -327,8 +471,14 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
         case AppEventType.checkInMissed:
         case AppEventType.medicationTaken:
         case AppEventType.medicationMissed:
+        case AppEventType.hydrationCompleted:
+        case AppEventType.hydrationMissed:
+        case AppEventType.mealCompleted:
+        case AppEventType.mealMissed:
         case AppEventType.seniorStatusChanged:
         case AppEventType.guardianAlertGenerated:
+        case AppEventType.safeZoneEntered:
+        case AppEventType.safeZoneExited:
           break;
       }
     }
@@ -343,6 +493,42 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
       latestDismissedEvent: latestDismissed,
     );
   }
+}
+
+class _SafeZoneProjection {
+  const _SafeZoneProjection({
+    required this.unresolvedExitEvent,
+  });
+
+  final PersistedEventRecord? unresolvedExitEvent;
+}
+
+_SafeZoneProjection _resolveSafeZoneState(List<PersistedEventRecord> timeline) {
+  PersistedEventRecord? unresolvedExitEvent;
+  for (final event in timeline) {
+    switch (event.type) {
+      case AppEventType.safeZoneExited:
+        unresolvedExitEvent = event;
+      case AppEventType.safeZoneEntered:
+        unresolvedExitEvent = null;
+      case AppEventType.checkInCompleted:
+      case AppEventType.checkInMissed:
+      case AppEventType.medicationTaken:
+      case AppEventType.medicationMissed:
+      case AppEventType.hydrationCompleted:
+      case AppEventType.hydrationMissed:
+      case AppEventType.mealCompleted:
+      case AppEventType.mealMissed:
+      case AppEventType.incidentSuspected:
+      case AppEventType.incidentConfirmed:
+      case AppEventType.incidentDismissed:
+      case AppEventType.emergencyTriggered:
+      case AppEventType.seniorStatusChanged:
+      case AppEventType.guardianAlertGenerated:
+        break;
+    }
+  }
+  return _SafeZoneProjection(unresolvedExitEvent: unresolvedExitEvent);
 }
 
 class _IncidentProjection {

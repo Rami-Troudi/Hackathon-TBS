@@ -33,6 +33,11 @@ class GuardianHomeScreen extends ConsumerWidget {
           icon: const Icon(Icons.timeline_outlined),
           tooltip: 'Timeline',
         ),
+        IconButton(
+          onPressed: () => context.push(AppRoutes.settings),
+          icon: const Icon(Icons.settings_outlined),
+          tooltip: 'Settings',
+        ),
       ],
       child: dataAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -45,8 +50,10 @@ class GuardianHomeScreen extends ConsumerWidget {
             );
           }
 
-          final seniorName =
-              data.seniorProfile?.displayName ?? data.activeSeniorId!;
+          final canShowSeniorInfo = data.settings.linkedSeniorInfoVisible;
+          final seniorName = canShowSeniorInfo
+              ? data.seniorProfile?.displayName ?? data.activeSeniorId!
+              : 'Linked senior';
           final guardianLabel = data.guardianProfile == null
               ? 'Guardian view'
               : '${data.guardianProfile!.displayName} • ${data.guardianProfile!.relationshipLabel}';
@@ -104,6 +111,49 @@ class GuardianHomeScreen extends ConsumerWidget {
                 actionLabel: 'Open incident monitoring',
                 onTap: () => context.push(AppRoutes.guardianIncidents),
               ),
+              if (data.settings.showHydrationReminders) ...[
+                Gaps.v8,
+                _MonitoringCard(
+                  title: 'Hydration',
+                  subtitle:
+                      'Completed ${data.hydrationState.completedCount}/${data.hydrationState.dailyGoalCompletions} • Missed ${data.hydrationState.missedCount}',
+                  leadingIcon: Icons.local_drink_outlined,
+                  actionLabel: 'Open hydration monitoring',
+                  onTap: () => context.push(AppRoutes.guardianHydration),
+                ),
+              ],
+              if (data.settings.showNutritionReminders) ...[
+                Gaps.v8,
+                _MonitoringCard(
+                  title: 'Nutrition',
+                  subtitle:
+                      'Completed ${data.nutritionState.completedCount}/${data.nutritionState.slots.length} • Missed ${data.nutritionState.missedCount}',
+                  leadingIcon: Icons.restaurant_outlined,
+                  actionLabel: 'Open nutrition monitoring',
+                  onTap: () => context.push(AppRoutes.guardianNutrition),
+                ),
+              ],
+              if (data.settings.showLocationUpdates) ...[
+                Gaps.v8,
+                _MonitoringCard(
+                  title: 'Location',
+                  subtitle: data.safeZoneStatus.zoneLabel,
+                  leadingIcon: Icons.my_location_outlined,
+                  actionLabel: 'Open location monitoring',
+                  onTap: () => context.push(AppRoutes.guardianLocation),
+                ),
+              ],
+              if (data.settings.dailyDigestEnabled ||
+                  data.settings.weeklyDigestEnabled) ...[
+                Gaps.v8,
+                _MonitoringCard(
+                  title: 'Daily digest',
+                  subtitle: data.dailySummary.headline,
+                  leadingIcon: Icons.summarize_outlined,
+                  actionLabel: 'Open digest',
+                  onTap: () => context.push(AppRoutes.guardianSummary),
+                ),
+              ],
               Gaps.v16,
               _TopAlertsCard(
                 alerts: data.topAlerts,

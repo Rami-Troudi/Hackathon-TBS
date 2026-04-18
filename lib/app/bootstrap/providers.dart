@@ -19,6 +19,7 @@ import 'package:senior_companion/core/repositories/dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/event_repository.dart';
 import 'package:senior_companion/core/repositories/guardian_alert_repository.dart';
+import 'package:senior_companion/core/repositories/hydration_repository.dart';
 import 'package:senior_companion/core/repositories/incident_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_app_session_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_check_in_repository.dart';
@@ -26,13 +27,22 @@ import 'package:senior_companion/core/repositories/local/local_dashboard_reposit
 import 'package:senior_companion/core/repositories/local/local_demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_event_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_guardian_alert_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_hydration_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_incident_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_medication_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_nutrition_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_preferences_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_profile_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_safe_zone_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_settings_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_summary_repository.dart';
 import 'package:senior_companion/core/repositories/medication_repository.dart';
+import 'package:senior_companion/core/repositories/nutrition_repository.dart';
 import 'package:senior_companion/core/repositories/preferences_repository.dart';
 import 'package:senior_companion/core/repositories/profile_repository.dart';
+import 'package:senior_companion/core/repositories/safe_zone_repository.dart';
+import 'package:senior_companion/core/repositories/settings_repository.dart';
+import 'package:senior_companion/core/repositories/summary_repository.dart';
 import 'package:senior_companion/core/storage/hive_initializer.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
 
@@ -181,6 +191,41 @@ final guardianAlertRepositoryProvider = Provider<GuardianAlertRepository>(
     eventRepository: ref.watch(eventRepositoryProvider),
     statusEngine: ref.watch(statusEngineProvider),
     storage: ref.watch(storageServiceProvider),
+  ),
+);
+
+final settingsRepositoryProvider = Provider<SettingsRepository>(
+  (ref) => LocalSettingsRepository(
+    storage: ref.watch(storageServiceProvider),
+  ),
+);
+
+final hydrationRepositoryProvider = Provider<HydrationRepository>(
+  (ref) => LocalHydrationRepository(
+    eventRepository: ref.watch(eventRepositoryProvider),
+    eventRecorder: ref.watch(appEventRecorderProvider),
+  ),
+);
+
+final nutritionRepositoryProvider = Provider<NutritionRepository>(
+  (ref) => LocalNutritionRepository(
+    eventRepository: ref.watch(eventRepositoryProvider),
+    eventRecorder: ref.watch(appEventRecorderProvider),
+  ),
+);
+
+final safeZoneRepositoryProvider = Provider<SafeZoneRepository>(
+  (ref) => LocalSafeZoneRepository(
+    hiveInitializer: ref.watch(hiveInitializerProvider),
+    eventRepository: ref.watch(eventRepositoryProvider),
+    eventRecorder: ref.watch(appEventRecorderProvider),
+  ),
+);
+
+final summaryRepositoryProvider = Provider<SummaryRepository>(
+  (ref) => LocalSummaryRepository(
+    eventRepository: ref.watch(eventRepositoryProvider),
+    statusEngine: ref.watch(statusEngineProvider),
   ),
 );
 

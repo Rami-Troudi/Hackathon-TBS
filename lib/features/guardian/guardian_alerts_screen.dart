@@ -98,6 +98,9 @@ class GuardianAlertsScreen extends ConsumerWidget {
       GuardianMonitoringDestination.timeline => AppRoutes.guardianTimeline,
       GuardianMonitoringDestination.checkIns => AppRoutes.guardianCheckIns,
       GuardianMonitoringDestination.medication => AppRoutes.guardianMedication,
+      GuardianMonitoringDestination.hydration => AppRoutes.guardianHydration,
+      GuardianMonitoringDestination.nutrition => AppRoutes.guardianNutrition,
+      GuardianMonitoringDestination.location => AppRoutes.guardianLocation,
       GuardianMonitoringDestination.incidents => AppRoutes.guardianIncidents,
     };
   }

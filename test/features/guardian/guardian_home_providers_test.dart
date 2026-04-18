@@ -8,23 +8,34 @@ import 'package:senior_companion/core/repositories/check_in_repository.dart';
 import 'package:senior_companion/core/repositories/dashboard_repository.dart';
 import 'package:senior_companion/core/repositories/event_repository.dart';
 import 'package:senior_companion/core/repositories/guardian_alert_repository.dart';
+import 'package:senior_companion/core/repositories/hydration_repository.dart';
 import 'package:senior_companion/core/repositories/incident_repository.dart';
 import 'package:senior_companion/core/repositories/medication_repository.dart';
+import 'package:senior_companion/core/repositories/nutrition_repository.dart';
 import 'package:senior_companion/core/repositories/profile_repository.dart';
+import 'package:senior_companion/core/repositories/safe_zone_repository.dart';
+import 'package:senior_companion/core/repositories/settings_repository.dart';
+import 'package:senior_companion/core/repositories/summary_repository.dart';
 import 'package:senior_companion/features/guardian/guardian_home_providers.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/models/app_session.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
+import 'package:senior_companion/shared/models/daily_summary.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
 import 'package:senior_companion/shared/models/guardian_alert.dart';
 import 'package:senior_companion/shared/models/guardian_alert_state.dart';
 import 'package:senior_companion/shared/models/guardian_profile.dart';
+import 'package:senior_companion/shared/models/hydration_state.dart';
 import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/models/medication_plan.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
+import 'package:senior_companion/shared/models/meal_state.dart';
 import 'package:senior_companion/shared/models/profile_link.dart';
+import 'package:senior_companion/shared/models/safe_zone.dart';
+import 'package:senior_companion/shared/models/safe_zone_status.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/models/senior_profile.dart';
+import 'package:senior_companion/shared/models/settings_preferences.dart';
 
 class _FakeAppSessionRepository implements AppSessionRepository {
   @override
@@ -151,6 +162,7 @@ class _FakeAlertRepository implements GuardianAlertRepository {
   Future<List<GuardianAlert>> fetchAlertsForSenior(
     String seniorId, {
     DateTime? now,
+    AlertSensitivity alertSensitivity = AlertSensitivity.normal,
   }) async =>
       <GuardianAlert>[
         GuardianAlert(
@@ -431,6 +443,202 @@ class _FakeEventRepository implements EventRepository {
       ];
 }
 
+class _FakeHydrationRepository implements HydrationRepository {
+  @override
+  Future<List<PersistedEventRecord>> fetchRecentHydrationEvents(
+    String seniorId, {
+    int limit = 20,
+  }) async =>
+      const <PersistedEventRecord>[];
+
+  @override
+  Future<HydrationState> getTodayState(
+    String seniorId, {
+    DateTime? now,
+    bool reconcileMissedSlots = true,
+  }) async =>
+      HydrationState(
+        slots: <HydrationSlotState>[
+          HydrationSlotState(
+            id: 'hydration-morning',
+            label: 'Morning hydration',
+            scheduledAt: DateTime(2026, 4, 18, 9, 0),
+            status: HydrationSlotStatus.completed,
+            resolvedAt: DateTime(2026, 4, 18, 9, 15),
+          ),
+        ],
+        dailyGoalCompletions: 3,
+      );
+
+  @override
+  Future<bool> markHydrationCompleted(
+    String seniorId, {
+    required String slotId,
+    DateTime? now,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> markHydrationMissed(
+    String seniorId, {
+    required String slotId,
+    DateTime? now,
+  }) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeNutritionRepository implements NutritionRepository {
+  @override
+  Future<List<PersistedEventRecord>> fetchRecentMealEvents(
+    String seniorId, {
+    int limit = 20,
+  }) async =>
+      const <PersistedEventRecord>[];
+
+  @override
+  Future<NutritionState> getTodayState(
+    String seniorId, {
+    DateTime? now,
+    bool reconcileMissedMeals = true,
+  }) async =>
+      NutritionState(
+        slots: <MealSlotState>[
+          MealSlotState(
+            id: 'meal-breakfast',
+            mealLabel: 'Breakfast',
+            scheduledAt: DateTime(2026, 4, 18, 8, 0),
+            status: MealSlotStatus.completed,
+            resolvedAt: DateTime(2026, 4, 18, 8, 20),
+          ),
+        ],
+      );
+
+  @override
+  Future<bool> markMealCompleted(
+    String seniorId, {
+    required String mealId,
+    DateTime? now,
+  }) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> markMealMissed(
+    String seniorId, {
+    required String mealId,
+    DateTime? now,
+  }) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeSafeZoneRepository implements SafeZoneRepository {
+  @override
+  Future<void> deleteSafeZone({
+    required String seniorId,
+    required String zoneId,
+  }) async {}
+
+  @override
+  Future<List<PersistedEventRecord>> fetchRecentZoneEvents(
+    String seniorId, {
+    int limit = 20,
+  }) async =>
+      const <PersistedEventRecord>[];
+
+  @override
+  Future<SafeZoneStatus> getCurrentStatus(String seniorId) async =>
+      SafeZoneStatus(
+        location: SimulatedLocation(
+          latitude: 36.8065,
+          longitude: 10.1815,
+          updatedAt: DateTime.parse('2026-04-18T10:00:00Z'),
+          label: 'Home',
+        ),
+        activeZone: const SafeZone(
+          id: 'senior-a-zone-home',
+          seniorId: 'senior-a',
+          name: 'Home',
+          centerLatitude: 36.8065,
+          centerLongitude: 10.1815,
+          radiusMeters: 250,
+          isActive: true,
+        ),
+        lastTransitionAt: DateTime.parse('2026-04-18T09:30:00Z'),
+      );
+
+  @override
+  Future<List<SafeZone>> getSafeZonesForSenior(String seniorId) async =>
+      const <SafeZone>[];
+
+  @override
+  Future<void> saveSafeZone(SafeZone zone) async {}
+
+  @override
+  Future<void> seedDefaultZonesIfNeeded(String seniorId) async {}
+
+  @override
+  Future<SafeZoneStatus> updateSimulatedLocation(
+    String seniorId, {
+    required double latitude,
+    required double longitude,
+    String? label,
+    DateTime? now,
+  }) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeSummaryRepository implements SummaryRepository {
+  @override
+  Future<DailySummary> buildGuardianDailySummary(
+    String seniorId, {
+    DateTime? now,
+  }) async =>
+      DailySummary(
+        audience: DailySummaryAudience.guardian,
+        headline: 'Stable day with no major warning signs.',
+        whatWentWell: const <String>['Check-ins completed: 1'],
+        needsAttention: const <String>['Missed medication confirmations: 1'],
+        notableEvents: const <String>['09:00 • Medication missed'],
+        generatedAt: DateTime.parse('2026-04-18T10:30:00Z'),
+      );
+
+  @override
+  Future<DailySummary> buildSeniorDailySummary(
+    String seniorId, {
+    DateTime? now,
+  }) {
+    throw UnimplementedError();
+  }
+}
+
+class _FakeSettingsRepository implements SettingsRepository {
+  @override
+  Future<GuardianSettingsPreferences> getGuardianSettings(
+          String guardianId) async =>
+      GuardianSettingsPreferences.defaults();
+
+  @override
+  Future<SeniorSettingsPreferences> getSeniorSettings(String seniorId) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> saveGuardianSettings(
+    String guardianId,
+    GuardianSettingsPreferences preferences,
+  ) async {}
+
+  @override
+  Future<void> saveSeniorSettings(
+    String seniorId,
+    SeniorSettingsPreferences preferences,
+  ) async {}
+}
+
 void main() {
   test('guardian home provider aggregates dashboard and module snapshots',
       () async {
@@ -449,6 +657,13 @@ void main() {
             .overrideWithValue(_FakeMedicationRepository()),
         incidentRepositoryProvider.overrideWithValue(_FakeIncidentRepository()),
         eventRepositoryProvider.overrideWithValue(_FakeEventRepository()),
+        hydrationRepositoryProvider
+            .overrideWithValue(_FakeHydrationRepository()),
+        nutritionRepositoryProvider
+            .overrideWithValue(_FakeNutritionRepository()),
+        safeZoneRepositoryProvider.overrideWithValue(_FakeSafeZoneRepository()),
+        summaryRepositoryProvider.overrideWithValue(_FakeSummaryRepository()),
+        settingsRepositoryProvider.overrideWithValue(_FakeSettingsRepository()),
       ],
     );
     addTearDown(container.dispose);
@@ -463,5 +678,8 @@ void main() {
     expect(homeData.dashboardSummary.globalStatus, SeniorGlobalStatus.watch);
     expect(homeData.checkInState.status, CheckInStatus.completed);
     expect(homeData.incidentState.status, IncidentFlowStatus.suspected);
+    expect(homeData.hydrationState.completedCount, 1);
+    expect(homeData.nutritionState.completedCount, 1);
+    expect(homeData.safeZoneStatus.isInsideSafeZone, true);
   });
 }

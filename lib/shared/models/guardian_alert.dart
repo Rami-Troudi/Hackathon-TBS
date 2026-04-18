@@ -11,6 +11,9 @@ enum GuardianMonitoringDestination {
   timeline,
   checkIns,
   medication,
+  hydration,
+  nutrition,
+  location,
   incidents,
 }
 

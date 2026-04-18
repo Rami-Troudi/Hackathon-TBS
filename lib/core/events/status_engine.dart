@@ -57,6 +57,10 @@ class SeniorStatusEngine {
     var todayCheckIns = 0;
     var todayMissedMedications = 0;
     var todayMissedCheckIns = 0;
+    var todayMissedHydration = 0;
+    var todayMissedMeals = 0;
+    var todaySafeZoneExits = 0;
+    var todaySafeZoneEnters = 0;
     var openSuspectedIncidents = 0;
     var openConfirmedIncidents = 0;
     var emergencyEvents = 0;
@@ -81,6 +85,25 @@ class SeniorStatusEngine {
           if (_isSameLocalDay(event.happenedAt, referenceTime)) {
             todayMissedMedications += 1;
           }
+        case AppEventType.hydrationCompleted:
+        case AppEventType.mealCompleted:
+        case AppEventType.safeZoneEntered:
+          if (_isSameLocalDay(event.happenedAt, referenceTime) &&
+              event.type == AppEventType.safeZoneEntered) {
+            todaySafeZoneEnters += 1;
+          }
+        case AppEventType.hydrationMissed:
+          if (_isSameLocalDay(event.happenedAt, referenceTime)) {
+            todayMissedHydration += 1;
+          }
+        case AppEventType.mealMissed:
+          if (_isSameLocalDay(event.happenedAt, referenceTime)) {
+            todayMissedMeals += 1;
+          }
+        case AppEventType.safeZoneExited:
+          if (_isSameLocalDay(event.happenedAt, referenceTime)) {
+            todaySafeZoneExits += 1;
+          }
         case AppEventType.incidentSuspected:
           openSuspectedIncidents += 1;
         case AppEventType.incidentConfirmed:
@@ -103,7 +126,12 @@ class SeniorStatusEngine {
     }
 
     final openIncidents = openSuspectedIncidents + openConfirmedIncidents;
-    final warningSignals = todayMissedCheckIns + todayMissedMedications;
+    final unresolvedSafeZoneExits =
+        (todaySafeZoneExits - todaySafeZoneEnters).clamp(0, 1000);
+    final warningSignals = todayMissedCheckIns +
+        todayMissedMedications +
+        todayMissedHydration +
+        todayMissedMeals;
     final reasons = <String>[];
 
     SeniorGlobalStatus status = SeniorGlobalStatus.ok;
@@ -117,6 +145,10 @@ class SeniorStatusEngine {
     } else if (status == SeniorGlobalStatus.ok && openSuspectedIncidents > 0) {
       status = SeniorGlobalStatus.watch;
       reasons.add('Unresolved suspected incident');
+    }
+    if (status == SeniorGlobalStatus.ok && unresolvedSafeZoneExits > 0) {
+      status = SeniorGlobalStatus.watch;
+      reasons.add('Senior is currently outside safe zone');
     }
     if (status != SeniorGlobalStatus.actionRequired && warningSignals >= 3) {
       status = SeniorGlobalStatus.actionRequired;
@@ -135,7 +167,10 @@ class SeniorStatusEngine {
       pendingAlerts: emergencyEvents +
           openIncidents +
           todayMissedCheckIns +
-          todayMissedMedications,
+          todayMissedMedications +
+          todayMissedHydration +
+          todayMissedMeals +
+          unresolvedSafeZoneExits,
       todayCheckIns: todayCheckIns,
       missedMedications: todayMissedMedications,
       missedCheckIns: todayMissedCheckIns,

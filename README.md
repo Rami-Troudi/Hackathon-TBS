@@ -1,8 +1,8 @@
-# Senior Companion - Group 4 Prototype (Guardian Feature Bundle)
+# Senior Companion - Group 5 Prototype (Settings + Wellbeing + Safety Expansion)
 
-This repository contains **Group 0 + Group 1 + Group 2 + Group 3 + Group 4** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, real senior-facing check-in/medication/incident flows, and a complete guardian monitoring experience.
+This repository contains **Group 0 + Group 1 + Group 2 + Group 3 + Group 4 + Group 5** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, and deterministic daily summaries.
 
-## Scope of this foundation (G0 + G1 + G2 + G3 + G4)
+## Scope of this foundation (G0 + G1 + G2 + G3 + G4 + G5)
 
 Included:
 - Flutter mobile app bootstrap
@@ -37,9 +37,17 @@ Included:
   - `/guardian/medication` medication adherence monitoring
   - `/guardian/incidents` incident state/history monitoring
   - `/guardian/profile` senior monitoring overview
+- G5 wellbeing + safety expansion:
+  - role-aware persisted settings via `SettingsRepository` (senior + guardian)
+  - senior hydration flow (`/senior/hydration`) with completed/missed slot logic
+  - senior nutrition flow (`/senior/nutrition`) with meal completed/missed logic
+  - safe-zone/location prototype monitoring (`/guardian/location`) with local simulated updates
+  - deterministic summaries (`/senior/summary`, `/guardian/summary`)
+  - guardian hydration/nutrition monitoring (`/guardian/hydration`, `/guardian/nutrition`)
+  - expanded guardian alert rules for hydration/nutrition misses and unresolved safe-zone exits
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
-  - `Hive` for structured entities (profiles, links, event records, medication plans, future entities)
+  - `Hive` for structured entities (profiles, links, event records, medication plans, safe zones, runtime location state, future entities)
 
 Not included:
 - Backend/server setup
@@ -169,6 +177,42 @@ Group 4 replaces the old guardian placeholder with a real local-first product fl
 - repeated missed routine signals (3+ today) -> critical active alert
 - incident dismissed -> resolved info item
 
+## G5 Settings + Wellbeing + Safety Expansion
+
+Group 5 extends the product into a fuller daily companion, while staying local-first:
+
+- **Settings expansion**
+  - Senior settings: text size, high contrast, notifications, reminder intensity, language, emergency label, simplified mode
+  - Guardian settings: notifications, alert sensitivity, digest toggles, module visibility toggles, linked senior info visibility
+  - Settings persist per active profile in `SharedPreferences` through `LocalSettingsRepository`
+- **Hydration module**
+  - Senior flow with deterministic morning/afternoon/evening slots
+  - Guardian monitoring with completion/missed snapshots and activity feed
+  - Events: `hydrationCompleted`, `hydrationMissed`
+- **Nutrition module**
+  - Senior flow with breakfast/lunch/dinner completion/missed states
+  - Guardian monitoring with daily and weekly-style snapshots
+  - Events: `mealCompleted`, `mealMissed`
+- **Safe-zone prototype module**
+  - Guardian safe-zone list and simulated location update controls
+  - Local enter/exit derivation and status tracking using Hive-backed safe-zone entities
+  - Events: `safeZoneEntered`, `safeZoneExited`
+- **Deterministic summaries**
+  - Senior summary (`/senior/summary`) and guardian digest (`/guardian/summary`)
+  - Local, rule-based generation from persisted event history + status engine (no AI/LLM)
+
+### G5 routes
+
+- Senior:
+  - `/senior/hydration`
+  - `/senior/nutrition`
+  - `/senior/summary`
+- Guardian:
+  - `/guardian/hydration`
+  - `/guardian/nutrition`
+  - `/guardian/location`
+  - `/guardian/summary`
+
 ## Demo data reset flow (G1)
 
 From **Settings**:
@@ -211,11 +255,15 @@ lib/
     onboarding/
     check_in/
     home/
+    hydration/
     incident/
+    location/
     medication/
+    nutrition/
     senior/
     guardian/
     settings/
+    summary/
   shared/
     constants/
     models/
