@@ -46,7 +46,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     // the async work itself, not just an artificial delay after it.
     final stopwatch = Stopwatch()..start();
 
+    final preferencesRepo = ref.read(preferencesRepositoryProvider);
     final sessionRepo = ref.read(appSessionRepositoryProvider);
+
+    // Increment launch count exactly once per application startup.
+    await preferencesRepo.incrementLaunchCount();
     final session = await sessionRepo.getSession();
     String destination;
 

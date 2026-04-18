@@ -772,8 +772,7 @@ No other file needs to change.
 
 | Limitation | Location | Target milestone |
 |---|---|---|
-| `homeDataProvider` increments launch count on every invalidation | `home_providers.dart` | Backlog (post-G1 cleanup) |
-| `SeniorGlobalStatus` is hardcoded in mock repository | `mock_dashboard_repository.dart` | G2 |
+| `mock_dashboard_repository` keeps hardcoded fallback values (non-source of truth after G2) | `mock_dashboard_repository.dart` | Backlog cleanup |
 | No dark theme | `app_theme.dart` | G8 |
 | `AppSession.toJson/fromJson` remains manual (no codegen) | `app_session.dart` | G2+ |
 | Dio is configured but never used | `networking/` | Later API milestone |

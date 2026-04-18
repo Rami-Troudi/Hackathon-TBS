@@ -76,13 +76,6 @@ class HomeData {
 /// Uses [FutureProvider.autoDispose] so the data is re-fetched whenever
 /// the provider is invalidated (e.g. after a role toggle via [ref.invalidate]).
 ///
-/// ⚠️ Known prototype behaviour:
-/// [incrementLaunchCount] is called every time this provider executes,
-/// including on invalidation. This means toggling the role will increment
-/// the launch count. This is acceptable for a demo prototype and should be
-/// corrected in G1 by separating the one-time launch increment from the
-/// role-refresh path.
-///
 /// Usage in a [ConsumerWidget]:
 /// ```dart
 /// final homeDataAsync = ref.watch(homeDataProvider);
@@ -103,8 +96,8 @@ final homeDataProvider = FutureProvider.autoDispose<HomeData>((ref) async {
   final eventRepository = ref.watch(eventRepositoryProvider);
   final activeSeniorResolver = ref.watch(activeSeniorResolverProvider);
 
-  // Increment and read the launch count in a single operation.
-  final launchCount = await preferencesRepo.incrementLaunchCount();
+  // Launch count increment happens once in Splash startup.
+  final launchCount = await preferencesRepo.getLaunchCount();
 
   final activeSeniorId = await activeSeniorResolver.resolveActiveSeniorId();
 
