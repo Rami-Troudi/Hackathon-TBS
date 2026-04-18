@@ -143,5 +143,29 @@ void main() {
       expect(switched.activeProfileId, 'guardian-a');
       expect(switched.startedAt, created.startedAt);
     });
+
+    test('restores session from persisted storage across repository instances',
+        () async {
+      final storage = _InMemoryStorageService();
+      final firstRepo = LocalAppSessionRepository(
+        storage: storage,
+        logger: _NoopLogger(),
+      );
+
+      await firstRepo.createSession(
+        activeRole: AppRole.guardian,
+        activeProfileId: 'guardian-sami',
+      );
+
+      final secondRepo = LocalAppSessionRepository(
+        storage: storage,
+        logger: _NoopLogger(),
+      );
+      final restored = await secondRepo.getSession();
+
+      expect(restored, isNotNull);
+      expect(restored!.activeRole, AppRole.guardian);
+      expect(restored.activeProfileId, 'guardian-sami');
+    });
   });
 }

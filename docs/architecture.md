@@ -740,10 +740,8 @@ No other file needs to change.
 | Limitation | Location | Target milestone |
 |---|---|---|
 | `homeDataProvider` increments launch count on every invalidation | `home_providers.dart` | G1 |
-| Session is always null on first launch — no real auth | `splash_screen.dart` | G1 |
 | `SeniorGlobalStatus` is hardcoded in mock repository | `mock_dashboard_repository.dart` | G2 |
-| No structured local entity storage (Hive not added yet) | `pubspec.yaml` | G1 |
 | No dark theme | `app_theme.dart` | G8 |
-| `AppSession.toJson/fromJson` is manual — no codegen | `app_session.dart` | G1 |
+| `AppSession.toJson/fromJson` remains manual (no codegen) | `app_session.dart` | G2+ |
 | Dio is configured but never used | `networking/` | Later API milestone |
 | Widget/bootstrap routing tests need expansion over time | `test/` | Iterative |

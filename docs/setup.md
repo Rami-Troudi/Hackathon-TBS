@@ -149,6 +149,13 @@ Run with verbose output:
 fvm flutter test --reporter expanded
 ```
 
+Current targeted G1 tests:
+
+- `test/app/bootstrap/app_initializer_test.dart` (bootstrap init path)
+- `test/core/repositories/local_profile_seed_test.dart` (seeding/reset behavior)
+- `test/core/repositories/local_repositories_test.dart` (session/preferences local repos)
+- `test/features/splash/splash_routing_test.dart` (startup routing)
+
 ---
 
 ## Useful development commands

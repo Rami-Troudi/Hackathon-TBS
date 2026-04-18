@@ -119,12 +119,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         : AppRole.senior;
     final profileRepository = ref.read(profileRepositoryProvider);
     String? nextProfileId;
-    if (nextRole == AppRole.senior) {
-      final profiles = await profileRepository.getSeniorProfiles();
-      nextProfileId = profiles.isEmpty ? null : profiles.first.id;
+
+    if (session.activeRole == AppRole.senior) {
+      // Keep role switching coherent with the currently active household link:
+      // prefer guardians linked to the active senior profile.
+      final linkedGuardians = await profileRepository.getLinkedGuardians(
+        session.activeProfileId,
+      );
+      if (linkedGuardians.isNotEmpty) {
+        nextProfileId = linkedGuardians.first.id;
+      } else {
+        final allGuardians = await profileRepository.getGuardianProfiles();
+        nextProfileId = allGuardians.isEmpty ? null : allGuardians.first.id;
+      }
     } else {
-      final profiles = await profileRepository.getGuardianProfiles();
-      nextProfileId = profiles.isEmpty ? null : profiles.first.id;
+      // Keep role switching coherent with the currently active household link:
+      // prefer seniors linked to the active guardian profile.
+      final linkedSeniors = await profileRepository.getLinkedSeniors(
+        session.activeProfileId,
+      );
+      if (linkedSeniors.isNotEmpty) {
+        nextProfileId = linkedSeniors.first.id;
+      } else {
+        final allSeniors = await profileRepository.getSeniorProfiles();
+        nextProfileId = allSeniors.isEmpty ? null : allSeniors.first.id;
+      }
     }
 
     if (nextProfileId == null) {
