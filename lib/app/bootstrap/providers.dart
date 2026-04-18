@@ -1,0 +1,80 @@
+import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:senior_companion/app/router/app_router.dart';
+import 'package:senior_companion/core/config/app_config.dart';
+import 'package:senior_companion/core/events/app_event_bus.dart';
+import 'package:senior_companion/core/logging/app_logger.dart';
+import 'package:senior_companion/core/networking/api_client.dart';
+import 'package:senior_companion/core/networking/dio_provider.dart';
+import 'package:senior_companion/core/notifications/notification_service.dart';
+import 'package:senior_companion/core/permissions/permission_service.dart';
+import 'package:senior_companion/core/repositories/app_session_repository.dart';
+import 'package:senior_companion/core/repositories/dashboard_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_app_session_repository.dart';
+import 'package:senior_companion/core/repositories/local/local_preferences_repository.dart';
+import 'package:senior_companion/core/repositories/local/mock_dashboard_repository.dart';
+import 'package:senior_companion/core/repositories/preferences_repository.dart';
+import 'package:senior_companion/core/storage/storage_service.dart';
+
+final appConfigProvider = Provider<AppConfig>(
+  (_) => throw UnimplementedError('appConfigProvider must be overridden at bootstrap'),
+);
+
+final appLoggerProvider = Provider<AppLogger>(
+  (_) => throw UnimplementedError('appLoggerProvider must be overridden at bootstrap'),
+);
+
+final storageServiceProvider = Provider<StorageService>(
+  (_) => throw UnimplementedError('storageServiceProvider must be overridden at bootstrap'),
+);
+
+final permissionServiceProvider = Provider<PermissionService>(
+  (_) => throw UnimplementedError('permissionServiceProvider must be overridden at bootstrap'),
+);
+
+final notificationServiceProvider = Provider<NotificationService>(
+  (_) => throw UnimplementedError('notificationServiceProvider must be overridden at bootstrap'),
+);
+
+final appEventBusProvider = Provider<AppEventBus>((ref) {
+  final bus = AppEventBus();
+  ref.onDispose(bus.dispose);
+  return bus;
+});
+
+final dioProvider = Provider<Dio>((ref) {
+  final config = ref.watch(appConfigProvider);
+  return buildDioClient(
+    config,
+    logger: ref.watch(appLoggerProvider),
+  );
+});
+
+final apiClientProvider = Provider<ApiClient>(
+  (ref) => ApiClient(
+    dio: ref.watch(dioProvider),
+    logger: ref.watch(appLoggerProvider),
+  ),
+);
+
+final appSessionRepositoryProvider = Provider<AppSessionRepository>(
+  (ref) => LocalAppSessionRepository(
+    storage: ref.watch(storageServiceProvider),
+    logger: ref.watch(appLoggerProvider),
+  ),
+);
+
+final preferencesRepositoryProvider = Provider<PreferencesRepository>(
+  (ref) => LocalPreferencesRepository(
+    storage: ref.watch(storageServiceProvider),
+  ),
+);
+
+final dashboardRepositoryProvider = Provider<DashboardRepository>(
+  (ref) => MockDashboardRepository(
+    logger: ref.watch(appLoggerProvider),
+  ),
+);
+
+final routerProvider = Provider<GoRouter>(buildAppRouter);
