@@ -21,6 +21,8 @@ class GuardianAlertsScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Guardian Alerts',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianAlerts,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianTimeline),

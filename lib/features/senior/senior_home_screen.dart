@@ -25,6 +25,7 @@ class SeniorHomeScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Senior Home',
+      role: AppShellRole.senior,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.settings),
@@ -120,40 +121,46 @@ class _SeniorHomeContent extends ConsumerWidget {
           reminderIntensityLabel: reminderIntensityLabel,
         ),
         Gaps.v16,
-        FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.checkIn),
-          icon: const Icon(Icons.check_circle_outline),
-          label: const Text('Open Check-in'),
+        Text(
+          'Daily tools',
+          style: Theme.of(context).textTheme.titleMedium,
         ),
         Gaps.v8,
-        FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.medication),
-          icon: const Icon(Icons.medication_outlined),
-          label: const Text('Open Medication'),
-        ),
-        Gaps.v8,
-        FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.incident),
-          icon: const Icon(Icons.warning_amber_outlined),
-          label: const Text('Open Help & Incident'),
-        ),
-        Gaps.v8,
-        FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.seniorHydration),
-          icon: const Icon(Icons.local_drink_outlined),
-          label: const Text('Open Hydration'),
-        ),
-        Gaps.v8,
-        FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.seniorNutrition),
-          icon: const Icon(Icons.restaurant_outlined),
-          label: const Text('Open Nutrition'),
-        ),
-        Gaps.v8,
-        FilledButton.icon(
-          onPressed: () => context.push(AppRoutes.seniorSummary),
-          icon: const Icon(Icons.summarize_outlined),
-          label: const Text('Open Daily Summary'),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            _SeniorToolButton(
+              icon: Icons.check_circle_outline,
+              label: 'Check-in',
+              onTap: () => context.push(AppRoutes.checkIn),
+            ),
+            _SeniorToolButton(
+              icon: Icons.medication_outlined,
+              label: 'Medication',
+              onTap: () => context.push(AppRoutes.medication),
+            ),
+            _SeniorToolButton(
+              icon: Icons.warning_amber_outlined,
+              label: 'Help',
+              onTap: () => context.push(AppRoutes.incident),
+            ),
+            _SeniorToolButton(
+              icon: Icons.local_drink_outlined,
+              label: 'Hydration',
+              onTap: () => context.push(AppRoutes.seniorHydration),
+            ),
+            _SeniorToolButton(
+              icon: Icons.restaurant_outlined,
+              label: 'Nutrition',
+              onTap: () => context.push(AppRoutes.seniorNutrition),
+            ),
+            _SeniorToolButton(
+              icon: Icons.summarize_outlined,
+              label: 'Summary',
+              onTap: () => context.push(AppRoutes.seniorSummary),
+            ),
+          ],
         ),
         Gaps.v16,
         if (!isSimplified) _RecentActivityCard(events: data.recentEvents),
@@ -403,14 +410,31 @@ class _PrimaryActionCard extends StatelessWidget {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             Gaps.v16,
-            FilledButton(
-              onPressed: onPrimaryAction,
-              child: const Text('I\'m okay'),
+            SizedBox(
+              width: double.infinity,
+              height: 132,
+              child: FilledButton.icon(
+                onPressed: onPrimaryAction,
+                icon: const Icon(Icons.favorite_outline),
+                label: const Text('I\'m okay'),
+              ),
             ),
             Gaps.v8,
-            OutlinedButton(
-              onPressed: onHelpAction,
-              child: const Text('I need help'),
+            SizedBox(
+              width: double.infinity,
+              height: 132,
+              child: FilledButton.icon(
+                onPressed: onHelpAction,
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                ),
+                icon: const Icon(Icons.call_outlined),
+                label: const Text('I need help'),
+              ),
             ),
           ],
         ),
@@ -424,6 +448,30 @@ class _PrimaryActionCard extends StatelessWidget {
     final hh = local.hour.toString().padLeft(2, '0');
     final mm = local.minute.toString().padLeft(2, '0');
     return '$hh:$mm';
+  }
+}
+
+class _SeniorToolButton extends StatelessWidget {
+  const _SeniorToolButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 164,
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        icon: Icon(icon),
+        label: Text(label),
+      ),
+    );
   }
 }
 

@@ -13,6 +13,7 @@ class SeniorSummaryScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(seniorSummaryDataProvider);
     return AppScaffoldShell(
       title: 'Daily summary',
+      role: AppShellRole.senior,
       child: summaryAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>

@@ -18,6 +18,8 @@ class GuardianMedicationScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Medication Monitoring',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianMedication,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianAlerts),

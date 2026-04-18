@@ -18,6 +18,8 @@ class GuardianIncidentScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Incident Monitoring',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianIncidents,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianAlerts),

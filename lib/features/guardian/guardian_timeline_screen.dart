@@ -20,6 +20,8 @@ class GuardianTimelineScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Guardian Timeline',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianTimeline,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianAlerts),

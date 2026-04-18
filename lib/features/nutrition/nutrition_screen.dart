@@ -15,6 +15,7 @@ class NutritionScreen extends ConsumerWidget {
     final nutritionAsync = ref.watch(seniorNutritionDataProvider);
     return AppScaffoldShell(
       title: 'Nutrition',
+      role: AppShellRole.senior,
       child: nutritionAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>

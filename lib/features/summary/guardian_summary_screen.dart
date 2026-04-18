@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/features/summary/summary_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
@@ -12,6 +13,8 @@ class GuardianSummaryScreen extends ConsumerWidget {
     final summaryAsync = ref.watch(guardianSummaryDataProvider);
     return AppScaffoldShell(
       title: 'Daily digest',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianSummary,
       child: summaryAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>

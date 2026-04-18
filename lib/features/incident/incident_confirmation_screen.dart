@@ -16,6 +16,7 @@ class IncidentConfirmationScreen extends ConsumerWidget {
     final incidentAsync = ref.watch(incidentDataProvider);
     return AppScaffoldShell(
       title: 'Help & Incident',
+      role: AppShellRole.senior,
       child: incidentAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>

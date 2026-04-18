@@ -15,6 +15,7 @@ class HydrationScreen extends ConsumerWidget {
     final hydrationAsync = ref.watch(seniorHydrationDataProvider);
     return AppScaffoldShell(
       title: 'Hydration',
+      role: AppShellRole.senior,
       child: hydrationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>

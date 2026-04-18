@@ -393,8 +393,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final shellRole =
+        _isGuardianRole ? AppShellRole.guardian : AppShellRole.shared;
     return AppScaffoldShell(
       title: 'Settings',
+      role: shellRole,
+      currentRoute: AppRoutes.settings,
       child: ListView(
         children: [
           FeaturePlaceholderCard(

@@ -22,6 +22,8 @@ class GuardianHomeScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Guardian Dashboard',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianHome,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianAlerts),

@@ -18,6 +18,8 @@ class GuardianCheckInScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Check-in Monitoring',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianCheckIns,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianAlerts),

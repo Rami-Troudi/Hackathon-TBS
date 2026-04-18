@@ -16,6 +16,8 @@ class GuardianProfileScreen extends ConsumerWidget {
 
     return AppScaffoldShell(
       title: 'Senior Overview',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianProfile,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianHome),

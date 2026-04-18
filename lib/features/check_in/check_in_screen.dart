@@ -19,6 +19,7 @@ class CheckInScreen extends ConsumerWidget {
     final dataAsync = ref.watch(checkInDataProvider);
     return AppScaffoldShell(
       title: 'Check-in',
+      role: AppShellRole.senior,
       child: dataAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>

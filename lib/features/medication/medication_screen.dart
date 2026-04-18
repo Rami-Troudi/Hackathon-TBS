@@ -16,6 +16,7 @@ class MedicationScreen extends ConsumerWidget {
     final medicationAsync = ref.watch(medicationDataProvider);
     return AppScaffoldShell(
       title: 'Medication',
+      role: AppShellRole.senior,
       child: medicationAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>

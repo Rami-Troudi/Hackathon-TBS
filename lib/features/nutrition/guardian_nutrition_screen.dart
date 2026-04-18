@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/features/guardian/guardian_ui_helpers.dart';
 import 'package:senior_companion/features/nutrition/nutrition_providers.dart';
@@ -14,6 +15,8 @@ class GuardianNutritionScreen extends ConsumerWidget {
     final dataAsync = ref.watch(guardianNutritionMonitoringDataProvider);
     return AppScaffoldShell(
       title: 'Nutrition monitoring',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianNutrition,
       child: dataAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
