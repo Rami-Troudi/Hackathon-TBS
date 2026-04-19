@@ -1,8 +1,8 @@
-# Senior Companion — Final Prototype (G0→G8)
+# Senior Companion — Final Prototype (G0→G9)
 
-This repository contains the final hackathon prototype through **G8**: a runnable local-first Flutter app with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, senior voice companion integration, guardian assistant insights, notification wiring, native permission configuration, and final demo documentation.
+This repository contains the final hackathon prototype through **G9**: a runnable local-first Flutter app with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, senior voice companion integration with **hardened reliability**, guardian assistant insights, notification wiring, native permission configuration, and final demo documentation.
 
-## Scope of this prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7 + G8)
+## Scope of this prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7 + G8 + G9)
 
 Included:
 - Flutter mobile app bootstrap
@@ -54,6 +54,14 @@ Included:
   - local fallback mode is the default (`VOICE_GATEWAY_MODE=local_fallback`) and bypasses the gateway with deterministic local WAV + text guidance for reliable offline demos
   - external gateway testing is opt-in via `VOICE_GATEWAY_MODE=gateway`
   - deterministic repositories remain source of truth; the voice service only receives grounded context for the current question
+- **G9 voice reliability hardening**:
+  - recorder lifecycle hardening with proper resource cleanup on cancel/error/success
+  - minimum 3.0s capture validation before send (blocks premature submission and improves STT reliability)
+  - gateway error resilience with immediate graceful fallback to local deterministic guidance
+  - connectivity-aware mode selection (local fallback for degraded/offline, gateway for online)
+  - deterministic WAV response generation in local fallback mode for predictable demo behavior
+  - voice request timeout protection and proper error state UI
+  - receiver cleanup on screen exit to prevent orphaned audio processes
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
   - `Hive` for structured entities (profiles, links, event records, medication plans, safe zones, runtime location state, future entities)
@@ -63,6 +71,10 @@ Included:
   - Android APK demo runbook and final QA checklist
   - final route/build/demo documentation cleanup
   - app launch label set to **Senior Companion**
+- G9 integration completion:
+  - voice gateway reliability hardening (see above)
+  - voice mode default to local fallback for demo stability
+  - G8 preflight audit report for release readiness assessment
 
 Not included:
 - Backend/server setup
