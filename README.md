@@ -51,6 +51,7 @@ Included:
   - voice gateway client in `core/voice` sends recorded audio plus compact local context
   - target gateway pipeline: Tunisian Arabic STT (`linagora/linto-asr-ar-tn-0.1`) -> local LLM -> Sawti TTS WAV response
   - when voice gateway calls fail, senior companion falls back to deterministic local text guidance
+  - optional QA mode (`VOICE_GATEWAY_MODE=local_fallback`) bypasses the gateway and returns deterministic local WAV + text guidance for offline roundtrip demos
   - deterministic repositories remain source of truth; the voice service only receives grounded context for the current question
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
@@ -118,6 +119,16 @@ fvm flutter run \
 ```
 
 `VOICE_GATEWAY_BASE_URL` defaults to `https://xqdrant.moetezfradi.me`. If the gateway later requires an app-level key, pass `VOICE_GATEWAY_API_KEY`, but keep Sawti and model-provider secrets on the gateway server only.
+
+QA-only contingency mode (non-production fallback):
+
+```bash
+fvm flutter run \
+  --dart-define=APP_ENV=dev \
+  --dart-define=VOICE_GATEWAY_MODE=local_fallback
+```
+
+`VOICE_GATEWAY_MODE=local_fallback` keeps the flow local-first and bypasses network voice calls so `/senior/companion` can complete start -> record -> send -> play even when the external gateway is unavailable.
 
 ## Onboarding + session flow (G1)
 
@@ -246,6 +257,7 @@ AI/assistant surfaces in the Flutter app:
   - records senior speech and sends it to the configured voice gateway
   - requires a minimum 3-second recording before send
   - uses deterministic local text fallback guidance on gateway failure
+  - supports QA-only `local_fallback` mode for deterministic offline voice roundtrip verification
   - gateway performs STT, LLM reasoning, and TTS outside the Flutter app
 - **Guardian Insights** (`/guardian/insights`)
   - conversational assistant grounded in local summaries, alerts, timeline, and status

@@ -13,12 +13,14 @@ class SeniorCompanionState {
     required this.status,
     this.lastRequestPath,
     this.lastResponsePath,
+    this.lastResponseText,
     this.errorMessage,
   });
 
   final VoiceInteractionStatus status;
   final String? lastRequestPath;
   final String? lastResponsePath;
+  final String? lastResponseText;
   final String? errorMessage;
 
   bool get isBusy =>
@@ -30,13 +32,18 @@ class SeniorCompanionState {
     VoiceInteractionStatus? status,
     String? lastRequestPath,
     String? lastResponsePath,
+    String? lastResponseText,
     String? errorMessage,
     bool clearError = false,
+    bool clearLastResponseText = false,
   }) {
     return SeniorCompanionState(
       status: status ?? this.status,
       lastRequestPath: lastRequestPath ?? this.lastRequestPath,
       lastResponsePath: lastResponsePath ?? this.lastResponsePath,
+      lastResponseText: clearLastResponseText
+          ? null
+          : lastResponseText ?? this.lastResponseText,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
@@ -79,7 +86,8 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
     if (!ref.read(voiceGatewayConfiguredProvider)) {
       state = state.copyWith(
         status: VoiceInteractionStatus.unavailable,
-        errorMessage: 'Voice gateway is not configured.',
+        errorMessage:
+            'Voice gateway is not configured. Set VOICE_GATEWAY_BASE_URL or VOICE_GATEWAY_MODE=local_fallback.',
       );
       return;
     }
@@ -136,6 +144,8 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
         status: VoiceInteractionStatus.playing,
         lastRequestPath: audioPath,
         lastResponsePath: result.responseAudioPath,
+        lastResponseText: result.responseText,
+        clearLastResponseText: result.responseText == null,
         clearError: true,
       );
       await _playback.playFile(result.responseAudioPath);

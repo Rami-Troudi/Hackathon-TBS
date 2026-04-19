@@ -29,6 +29,9 @@ class GatewayVoiceCompanionRepository implements VoiceCompanionRepository {
       audience: VoiceAudience.senior,
       appContext: context,
     );
-    return VoiceInteractionResult(responseAudioPath: response.audioFilePath);
+    return VoiceInteractionResult(
+      responseAudioPath: response.audioFilePath,
+      responseText: response.responseText,
+    );
   }
 }

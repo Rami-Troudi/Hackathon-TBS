@@ -75,6 +75,12 @@ class SeniorCompanionScreen extends ConsumerWidget {
               onTap: state.isBusy ? null : controller.replayLastResponse,
             ),
           ],
+          if (state.lastResponseText != null) ...[
+            Gaps.v12,
+            AppCard(
+              child: Text(state.lastResponseText!),
+            ),
+          ],
           Gaps.v16,
           OutlinedButton.icon(
             onPressed: state.isBusy ? controller.cancel : null,
@@ -84,7 +90,7 @@ class SeniorCompanionScreen extends ConsumerWidget {
           Gaps.v24,
           const AppCard(
             child: Text(
-              'The assistant listens through the configured voice gateway. App data remains local source of truth; the voice service only receives compact context for the current question.',
+              'The assistant uses the configured voice gateway by default. QA mode can force a local deterministic fallback response. App data remains local source of truth.',
             ),
           ),
         ],
@@ -113,7 +119,7 @@ class SeniorCompanionScreen extends ConsumerWidget {
         'Your question is being processed by the voice assistant.',
       VoiceInteractionStatus.playing => 'Playing the assistant response.',
       VoiceInteractionStatus.unavailable =>
-        'The voice gateway URL is missing. Configure VOICE_GATEWAY_BASE_URL.',
+        'Configure VOICE_GATEWAY_BASE_URL or use VOICE_GATEWAY_MODE=local_fallback for QA-only local roundtrip tests.',
       VoiceInteractionStatus.error =>
         'Check microphone permission, network access, or gateway availability.',
     };

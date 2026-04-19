@@ -12,8 +12,11 @@ import 'package:senior_companion/core/voice/voice_gateway_client.dart';
 import 'package:senior_companion/features/companion/senior_companion_providers.dart';
 
 class _FakeVoiceCompanionRepository implements VoiceCompanionRepository {
+  _FakeVoiceCompanionRepository({this.responseTextToReturn});
+
   int calls = 0;
   String? receivedPath;
+  final String? responseTextToReturn;
 
   @override
   bool get isConfigured => true;
@@ -24,8 +27,9 @@ class _FakeVoiceCompanionRepository implements VoiceCompanionRepository {
   ) async {
     calls += 1;
     receivedPath = audioFilePath;
-    return const VoiceInteractionResult(
-      responseAudioPath: '/tmp/voice-response.wav',
+    return VoiceInteractionResult(
+      responseAudioPath: 'voice-response.wav',
+      responseText: responseTextToReturn,
     );
   }
 }
@@ -159,10 +163,11 @@ void main() {
     final state = container.read(seniorCompanionControllerProvider);
     expect(state.status, VoiceInteractionStatus.idle);
     expect(state.lastRequestPath, recordingPath);
-    expect(state.lastResponsePath, '/tmp/voice-response.wav');
+    expect(state.lastResponsePath, 'voice-response.wav');
+    expect(state.lastResponseText, isNull);
     expect(repository.calls, 1);
     expect(repository.receivedPath, recordingPath);
-    expect(playback.playedPath, '/tmp/voice-response.wav');
+    expect(playback.playedPath, 'voice-response.wav');
   });
 
   test('senior companion is unavailable when gateway is not configured',
@@ -239,5 +244,37 @@ void main() {
     expect(state.errorMessage,
         contains('Voice service is currently unavailable.'));
     expect(state.errorMessage, contains('Local guidance:'));
+  });
+
+  test('senior companion stores deterministic local response text', () async {
+    final recordingPath = await _createWavFile(seconds: 4);
+    addTearDown(() => File(recordingPath).delete());
+
+    final repository = _FakeVoiceCompanionRepository(
+      responseTextToReturn:
+          'QA local fallback response. Hydration looks good today.',
+    );
+    final recorder = _FakeVoiceRecordingService(recordingPath);
+    final playback = _FakeVoicePlaybackService();
+    final container = ProviderContainer(
+      overrides: [
+        voiceCompanionRepositoryProvider.overrideWithValue(repository),
+        voiceGatewayConfiguredProvider.overrideWithValue(true),
+        voiceRecordingServiceProvider.overrideWithValue(recorder),
+        voicePlaybackServiceProvider.overrideWithValue(playback),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final notifier = container.read(seniorCompanionControllerProvider.notifier);
+    await notifier.startListening();
+    await notifier.stopAndSend();
+
+    final state = container.read(seniorCompanionControllerProvider);
+    expect(state.status, VoiceInteractionStatus.idle);
+    expect(
+      state.lastResponseText,
+      'QA local fallback response. Hydration looks good today.',
+    );
   });
 }

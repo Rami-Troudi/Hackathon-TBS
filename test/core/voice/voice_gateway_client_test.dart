@@ -41,24 +41,40 @@ Future<String> _createWavFile() async {
   writeUint32(dataLength);
   bytes.add(List<int>.filled(dataLength, 0));
 
+  final artifactDir = await _testArtifactDirectory();
   final file = File(
-    '${Directory.systemTemp.path}/voice-gateway-test-${DateTime.now().microsecondsSinceEpoch}.wav',
+    '${artifactDir.path}/voice-gateway-test-${DateTime.now().microsecondsSinceEpoch}.wav',
   );
   await file.writeAsBytes(bytes.toBytes(), flush: true);
   return file.path;
 }
 
-VoiceGatewayClient _clientFor(String baseUrl) {
+Future<Directory> _testArtifactDirectory() async {
+  final dir = Directory(
+    '${Directory.current.path}/.dart_tool/test_artifacts/voice_gateway_client',
+  );
+  if (!await dir.exists()) {
+    await dir.create(recursive: true);
+  }
+  return dir;
+}
+
+VoiceGatewayClient _clientFor(
+  String baseUrl, {
+  VoiceGatewayMode mode = VoiceGatewayMode.gateway,
+}) {
   final config = AppConfig(
     environment: AppEnvironment.dev,
     apiBaseUrl: 'https://prototype.local',
     enableNetworkLogs: false,
     voiceGatewayBaseUrl: baseUrl,
     voiceGatewayApiKey: '',
+    voiceGatewayMode: mode,
   );
   return VoiceGatewayClient(
     dio: Dio(),
     config: config,
+    temporaryDirectoryProvider: _testArtifactDirectory,
   );
 }
 
@@ -127,5 +143,42 @@ void main() {
         ),
       ),
     );
+  });
+
+  test(
+      'local fallback mode bypasses network and returns deterministic response',
+      () async {
+    final audioPath = await _createWavFile();
+    addTearDown(() => File(audioPath).delete());
+    final client = _clientFor(
+      'http://127.0.0.1:1',
+      mode: VoiceGatewayMode.localFallback,
+    );
+
+    final response = await client.sendVoice(
+      audioFilePath: audioPath,
+      audience: VoiceAudience.senior,
+      appContext: const <String, dynamic>{
+        'summary': 'Hydration looks good today.',
+        'today': <String, dynamic>{
+          'checkIn': 'completed',
+          'nextMedication': 'Vitamin D at 18:00',
+        },
+        'activeAlerts': <String>['medium: Missed check-in'],
+      },
+    );
+    addTearDown(() => File(response.audioFilePath).delete());
+
+    expect(client.isConfigured, isTrue);
+    expect(await File(response.audioFilePath).exists(), isTrue);
+    expect(await File(response.audioFilePath).length(), greaterThan(44));
+    expect(response.responseText, contains('QA local fallback response.'));
+    expect(response.responseText, contains('Hydration looks good today.'));
+    expect(response.responseText, contains('Check-in: completed.'));
+    expect(
+      response.responseText,
+      contains('Next medication: Vitamin D at 18:00.'),
+    );
+    expect(response.responseText, contains('Active alerts: 1.'));
   });
 }

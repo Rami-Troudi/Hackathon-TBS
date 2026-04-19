@@ -38,22 +38,30 @@ class VoiceGatewayException implements Exception {
 }
 
 class VoiceGatewayClient {
-  const VoiceGatewayClient({
+  VoiceGatewayClient({
     required this.dio,
     required this.config,
-  });
+    Future<Directory> Function()? temporaryDirectoryProvider,
+  }) : _temporaryDirectoryProvider =
+            temporaryDirectoryProvider ?? getTemporaryDirectory;
 
   final Dio dio;
   final AppConfig config;
+  final Future<Directory> Function() _temporaryDirectoryProvider;
 
-  bool get isConfigured => config.hasVoiceGateway;
+  bool get isConfigured =>
+      config.usesLocalVoiceFallback || config.hasVoiceGateway;
 
   Future<VoiceGatewayAudioResponse> sendVoice({
     required String audioFilePath,
     required VoiceAudience audience,
     required Map<String, dynamic> appContext,
   }) async {
-    if (!isConfigured) {
+    if (config.usesLocalVoiceFallback) {
+      return _buildLocalFallbackResponse(appContext);
+    }
+
+    if (!config.hasVoiceGateway) {
       throw StateError('Voice gateway is not configured.');
     }
 
@@ -95,12 +103,97 @@ class VoiceGatewayClient {
       );
     }
 
-    final tempDir = await getTemporaryDirectory();
+    final outputPath = await _writeResponseBytes(bytes);
+    return VoiceGatewayAudioResponse(audioFilePath: outputPath);
+  }
+
+  Future<VoiceGatewayAudioResponse> _buildLocalFallbackResponse(
+    Map<String, dynamic> appContext,
+  ) async {
+    final responseText = _buildLocalFallbackText(appContext);
+    final outputPath = await _writeResponseBytes(_buildSilentWavBytes());
+    return VoiceGatewayAudioResponse(
+      audioFilePath: outputPath,
+      responseText: responseText,
+    );
+  }
+
+  String _buildLocalFallbackText(Map<String, dynamic> appContext) {
+    final summary = _readString(
+      appContext['summary'],
+      fallback: 'I checked your local status summary.',
+    );
+    final today = appContext['today'];
+    final todayMap = today is Map<String, dynamic>
+        ? today
+        : today is Map
+            ? Map<String, dynamic>.from(today)
+            : const <String, dynamic>{};
+    final checkIn = _readString(todayMap['checkIn'], fallback: 'pending');
+    final nextMedication =
+        _readString(todayMap['nextMedication'], fallback: 'none pending');
+    final activeAlerts = appContext['activeAlerts'];
+    final activeAlertCount = activeAlerts is List ? activeAlerts.length : 0;
+
+    return 'QA local fallback response. '
+        '$summary '
+        'Check-in: $checkIn. '
+        'Next medication: $nextMedication. '
+        'Active alerts: $activeAlertCount.';
+  }
+
+  String _readString(
+    Object? value, {
+    required String fallback,
+  }) {
+    final content = value?.toString().trim() ?? '';
+    return content.isEmpty ? fallback : content;
+  }
+
+  Future<String> _writeResponseBytes(List<int> bytes) async {
+    final tempDir = await _temporaryDirectoryProvider();
     final outputFile = File(
       '${tempDir.path}/senior-companion-response-${DateTime.now().microsecondsSinceEpoch}.wav',
     );
     await outputFile.writeAsBytes(bytes, flush: true);
-    return VoiceGatewayAudioResponse(audioFilePath: outputFile.path);
+    return outputFile.path;
+  }
+
+  List<int> _buildSilentWavBytes() {
+    const sampleRate = 16000;
+    const channels = 1;
+    const bitsPerSample = 16;
+    const seconds = 2;
+    final dataLength = sampleRate * seconds * channels * (bitsPerSample ~/ 8);
+    final totalLength = 36 + dataLength;
+    final bytes = <int>[];
+
+    void writeAscii(String value) => bytes.addAll(value.codeUnits);
+    void writeUint16(int value) =>
+        bytes.addAll([value & 0xFF, (value >> 8) & 0xFF]);
+    void writeUint32(int value) => bytes.addAll([
+          value & 0xFF,
+          (value >> 8) & 0xFF,
+          (value >> 16) & 0xFF,
+          (value >> 24) & 0xFF,
+        ]);
+
+    writeAscii('RIFF');
+    writeUint32(totalLength);
+    writeAscii('WAVE');
+    writeAscii('fmt ');
+    writeUint32(16);
+    writeUint16(1);
+    writeUint16(channels);
+    writeUint32(sampleRate);
+    writeUint32(sampleRate * channels * (bitsPerSample ~/ 8));
+    writeUint16(channels * (bitsPerSample ~/ 8));
+    writeUint16(bitsPerSample);
+    writeAscii('data');
+    writeUint32(dataLength);
+    bytes.addAll(List<int>.filled(dataLength, 0));
+
+    return bytes;
   }
 
   VoiceGatewayException _mapDioException(DioException error) {
