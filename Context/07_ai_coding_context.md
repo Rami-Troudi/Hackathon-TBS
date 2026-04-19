@@ -1,4 +1,4 @@
-# AI Coding Context — Senior Companion Application
+  # AI Coding Context — Senior Companion Application
 
 Use this file as the **primary context prompt** for AI-assisted coding, scaffolding, architecture decisions, or implementation planning.
 
