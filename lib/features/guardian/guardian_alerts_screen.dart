@@ -11,6 +11,22 @@ import 'package:senior_companion/shared/models/guardian_alert_state.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
+String _tr(
+  BuildContext context, {
+  required String fr,
+  required String en,
+  required String ar,
+}) {
+  switch (Localizations.localeOf(context).languageCode) {
+    case 'ar':
+      return ar;
+    case 'en':
+      return en;
+    default:
+      return fr;
+  }
+}
+
 class GuardianAlertsScreen extends ConsumerWidget {
   const GuardianAlertsScreen({super.key});
 
@@ -19,23 +35,46 @@ class GuardianAlertsScreen extends ConsumerWidget {
     final alertsAsync = ref.watch(guardianAlertsDataProvider);
 
     return AppScaffoldShell(
-      title: 'Guardian Alerts',
+      title: _tr(
+        context,
+        fr: 'Alertes aidant',
+        en: 'Guardian Alerts',
+        ar: 'تنبيهات المرافق',
+      ),
       role: AppShellRole.guardian,
       currentRoute: AppRoutes.guardianAlerts,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianTimeline),
           icon: const Icon(Icons.timeline_outlined),
-          tooltip: 'Timeline',
+          tooltip:
+              _tr(context, fr: 'Chronologie', en: 'Timeline', ar: 'التسلسل'),
         ),
       ],
       child: alertsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Could not load alerts: $error')),
+        error: (error, _) => Center(
+          child: Text(
+            _tr(
+              context,
+              fr: 'Impossible de charger les alertes : $error',
+              en: 'Could not load alerts: $error',
+              ar: 'تعذر تحميل التنبيهات: $error',
+            ),
+          ),
+        ),
         data: (data) {
           if (data.seniorId == null) {
-            return const Center(child: Text('No linked senior for alerts.'));
+            return Center(
+              child: Text(
+                _tr(
+                  context,
+                  fr: 'Aucun senior lié pour les alertes.',
+                  en: 'No linked senior for alerts.',
+                  ar: 'لا يوجد مسن مرتبط للتنبيهات.',
+                ),
+              ),
+            );
           }
 
           return ListView(
@@ -46,16 +85,28 @@ class GuardianAlertsScreen extends ConsumerWidget {
               ),
               Gaps.v4,
               Text(
-                'Active ${data.activeCount} • Acknowledged ${data.acknowledgedCount} • Resolved ${data.resolvedCount}',
+                '${_tr(context, fr: 'Actives', en: 'Active', ar: 'نشطة')} ${data.activeCount} • ${_tr(context, fr: 'Accusées', en: 'Acknowledged', ar: 'تم الاطلاع')} ${data.acknowledgedCount} • ${_tr(context, fr: 'Résolues', en: 'Resolved', ar: 'تم الحل')} ${data.resolvedCount}',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
               Gaps.v16,
               if (data.alerts.isEmpty)
-                const EmptyStateBlock(
+                EmptyStateBlock(
                   icon: Icons.notifications_none_outlined,
-                  title: 'No alerts right now',
-                  description:
-                      'Local monitoring has not found anything that needs attention.',
+                  title: _tr(
+                    context,
+                    fr: 'Aucune alerte pour le moment',
+                    en: 'No alerts right now',
+                    ar: 'لا توجد تنبيهات الآن',
+                  ),
+                  description: _tr(
+                    context,
+                    fr:
+                        'La surveillance locale n’a rien détecté qui nécessite une action.',
+                    en:
+                        'Local monitoring has not found anything that needs attention.',
+                    ar:
+                        'المراقبة المحلية لم ترصد شيئًا يحتاج إلى تدخل.',
+                  ),
                 )
               else
                 ...data.alerts.map(

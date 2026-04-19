@@ -16,6 +16,22 @@ import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 import 'package:senior_companion/shared/widgets/connectivity_banner.dart';
 
+String _tr(
+  BuildContext context, {
+  required String fr,
+  required String en,
+  required String ar,
+}) {
+  switch (Localizations.localeOf(context).languageCode) {
+    case 'ar':
+      return ar;
+    case 'en':
+      return en;
+    default:
+      return fr;
+  }
+}
+
 class GuardianHomeScreen extends ConsumerWidget {
   const GuardianHomeScreen({super.key});
 
@@ -27,43 +43,75 @@ class GuardianHomeScreen extends ConsumerWidget {
             AppConnectivityState.online;
 
     return AppScaffoldShell(
-      title: 'Guardian Dashboard',
+      title: _tr(
+        context,
+        fr: 'Tableau aidant',
+        en: 'Guardian Dashboard',
+        ar: 'لوحة المرافق',
+      ),
       role: AppShellRole.guardian,
       currentRoute: AppRoutes.guardianHome,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianAlerts),
           icon: const Icon(Icons.notifications_active_outlined),
-          tooltip: 'Alerts',
+          tooltip: _tr(context, fr: 'Alertes', en: 'Alerts', ar: 'التنبيهات'),
         ),
         IconButton(
           onPressed: () => context.push(AppRoutes.guardianTimeline),
           icon: const Icon(Icons.timeline_outlined),
-          tooltip: 'Timeline',
+          tooltip:
+              _tr(context, fr: 'Chronologie', en: 'Timeline', ar: 'التسلسل'),
         ),
         IconButton(
           onPressed: () => context.push(AppRoutes.settings),
           icon: const Icon(Icons.settings_outlined),
-          tooltip: 'Settings',
+          tooltip:
+              _tr(context, fr: 'Paramètres', en: 'Settings', ar: 'الإعدادات'),
         ),
       ],
       child: dataAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Could not load dashboard: $error')),
+        error: (error, _) => Center(
+          child: Text(
+            _tr(
+              context,
+              fr: 'Impossible de charger le tableau: $error',
+              en: 'Could not load dashboard: $error',
+              ar: 'تعذر تحميل اللوحة: $error',
+            ),
+          ),
+        ),
         data: (data) {
           if (data.activeSeniorId == null) {
-            return const Center(
-              child: Text('No linked senior found in this guardian session.'),
+            return Center(
+              child: Text(
+                _tr(
+                  context,
+                  fr: 'Aucun senior lié dans cette session aidant.',
+                  en: 'No linked senior found in this guardian session.',
+                  ar: 'لا يوجد مسن مرتبط في جلسة المرافق هذه.',
+                ),
+              ),
             );
           }
 
           final canShowSeniorInfo = data.settings.linkedSeniorInfoVisible;
           final seniorName = canShowSeniorInfo
               ? data.seniorProfile?.displayName ?? data.activeSeniorId!
-              : 'Linked senior';
+              : _tr(
+                  context,
+                  fr: 'Senior lié',
+                  en: 'Linked senior',
+                  ar: 'المسن المرتبط',
+                );
           final guardianLabel = data.guardianProfile == null
-              ? 'Guardian view'
+              ? _tr(
+                  context,
+                  fr: 'Vue aidant',
+                  en: 'Guardian view',
+                  ar: 'عرض المرافق',
+                )
               : '${data.guardianProfile!.displayName} • ${data.guardianProfile!.relationshipLabel}';
 
           return ListView(
@@ -99,33 +147,53 @@ class GuardianHomeScreen extends ConsumerWidget {
               ),
               Gaps.v16,
               MonitoringCard(
-                title: 'Check-ins',
-                subtitle: _checkInSubtitle(data.checkInState),
+                title: _tr(
+                  context,
+                  fr: 'Check-ins',
+                  en: 'Check-ins',
+                  ar: 'تأكيدات الحضور',
+                ),
+                subtitle: _checkInSubtitle(context, data.checkInState),
                 icon: Icons.check_circle_outline,
                 onTap: () => context.push(AppRoutes.guardianCheckIns),
               ),
               Gaps.v8,
               MonitoringCard(
-                title: 'Medication',
+                title: _tr(
+                  context,
+                  fr: 'Médication',
+                  en: 'Medication',
+                  ar: 'الأدوية',
+                ),
                 subtitle:
-                    'Taken ${data.todayMedicationTaken} • Missed ${data.todayMedicationMissed} • Pending ${data.todayMedicationPending}',
+                    '${_tr(context, fr: 'Pris', en: 'Taken', ar: 'تم') } ${data.todayMedicationTaken} • ${_tr(context, fr: 'Manqué', en: 'Missed', ar: 'فائت')} ${data.todayMedicationMissed} • ${_tr(context, fr: 'En attente', en: 'Pending', ar: 'معلّق')} ${data.todayMedicationPending}',
                 icon: Icons.medication_outlined,
                 onTap: () => context.push(AppRoutes.guardianMedication),
               ),
               Gaps.v8,
               MonitoringCard(
-                title: 'Incidents',
+                title: _tr(
+                  context,
+                  fr: 'Incidents',
+                  en: 'Incidents',
+                  ar: 'الحوادث',
+                ),
                 subtitle:
-                    'Open suspected ${data.incidentState.openSuspectedIncidents} • Open confirmed ${data.incidentState.openConfirmedIncidents} • ${_incidentLabel(data.incidentState.status)}',
+                    '${_tr(context, fr: 'Suspects ouverts', en: 'Open suspected', ar: 'مشتبه به مفتوح')} ${data.incidentState.openSuspectedIncidents} • ${_tr(context, fr: 'Confirmés ouverts', en: 'Open confirmed', ar: 'مؤكد مفتوح')} ${data.incidentState.openConfirmedIncidents} • ${_incidentLabel(context, data.incidentState.status)}',
                 icon: Icons.report_gmailerrorred_outlined,
                 onTap: () => context.push(AppRoutes.guardianIncidents),
               ),
               if (data.settings.showHydrationReminders) ...[
                 Gaps.v8,
                 MonitoringCard(
-                  title: 'Hydration',
+                  title: _tr(
+                    context,
+                    fr: 'Hydratation',
+                    en: 'Hydration',
+                    ar: 'الترطيب',
+                  ),
                   subtitle:
-                      'Completed ${data.hydrationState.completedCount}/${data.hydrationState.dailyGoalCompletions} • Missed ${data.hydrationState.missedCount}',
+                      '${_tr(context, fr: 'Complété', en: 'Completed', ar: 'مكتمل')} ${data.hydrationState.completedCount}/${data.hydrationState.dailyGoalCompletions} • ${_tr(context, fr: 'Manqué', en: 'Missed', ar: 'فائت')} ${data.hydrationState.missedCount}',
                   icon: Icons.local_drink_outlined,
                   onTap: () => context.push(AppRoutes.guardianHydration),
                 ),
@@ -133,9 +201,14 @@ class GuardianHomeScreen extends ConsumerWidget {
               if (data.settings.showNutritionReminders) ...[
                 Gaps.v8,
                 MonitoringCard(
-                  title: 'Nutrition',
+                  title: _tr(
+                    context,
+                    fr: 'Nutrition',
+                    en: 'Nutrition',
+                    ar: 'التغذية',
+                  ),
                   subtitle:
-                      'Completed ${data.nutritionState.completedCount}/${data.nutritionState.slots.length} • Missed ${data.nutritionState.missedCount}',
+                      '${_tr(context, fr: 'Complété', en: 'Completed', ar: 'مكتمل')} ${data.nutritionState.completedCount}/${data.nutritionState.slots.length} • ${_tr(context, fr: 'Manqué', en: 'Missed', ar: 'فائت')} ${data.nutritionState.missedCount}',
                   icon: Icons.restaurant_outlined,
                   onTap: () => context.push(AppRoutes.guardianNutrition),
                 ),
@@ -143,7 +216,12 @@ class GuardianHomeScreen extends ConsumerWidget {
               if (data.settings.showLocationUpdates) ...[
                 Gaps.v8,
                 MonitoringCard(
-                  title: 'Location',
+                  title: _tr(
+                    context,
+                    fr: 'Localisation',
+                    en: 'Location',
+                    ar: 'الموقع',
+                  ),
                   subtitle: data.safeZoneStatus.zoneLabel,
                   icon: Icons.my_location_outlined,
                   onTap: () => context.push(AppRoutes.guardianLocation),
@@ -153,7 +231,12 @@ class GuardianHomeScreen extends ConsumerWidget {
                   data.settings.weeklyDigestEnabled) ...[
                 Gaps.v8,
                 MonitoringCard(
-                  title: 'Daily digest',
+                  title: _tr(
+                    context,
+                    fr: 'Résumé quotidien',
+                    en: 'Daily digest',
+                    ar: 'الملخص اليومي',
+                  ),
                   subtitle: data.dailySummary.headline,
                   icon: Icons.summarize_outlined,
                   onTap: () => context.push(AppRoutes.guardianSummary),
@@ -161,8 +244,19 @@ class GuardianHomeScreen extends ConsumerWidget {
               ],
               Gaps.v8,
               MonitoringCard(
-                title: 'AI insights',
-                subtitle: 'Grounded Q&A and smart explanations from local data',
+                title: _tr(
+                  context,
+                  fr: 'Insights IA',
+                  en: 'AI insights',
+                  ar: 'رؤى الذكاء الاصطناعي',
+                ),
+                subtitle: _tr(
+                  context,
+                  fr:
+                      'Questions/réponses ancrées et explications depuis les données locales',
+                  en: 'Grounded Q&A and smart explanations from local data',
+                  ar: 'أسئلة وأجوبة وتفسيرات مبنية على البيانات المحلية',
+                ),
                 icon: Icons.smart_toy_outlined,
                 onTap: () => context.push(AppRoutes.guardianInsights),
               ),
@@ -183,22 +277,63 @@ class GuardianHomeScreen extends ConsumerWidget {
     );
   }
 
-  String _checkInSubtitle(CheckInState state) {
+  String _checkInSubtitle(BuildContext context, CheckInState state) {
     return switch (state.status) {
       CheckInStatus.completed =>
-        'Today completed at ${formatLocalTime(state.completedAt!)}',
+        _tr(
+          context,
+          fr: 'Complété aujourd’hui à ${formatLocalTime(state.completedAt!)}',
+          en: 'Today completed at ${formatLocalTime(state.completedAt!)}',
+          ar: 'تم التأكيد اليوم عند ${formatLocalTime(state.completedAt!)}',
+        ),
       CheckInStatus.missed =>
-        'Today missed at ${formatLocalTime(state.missedAt ?? state.windowEnd)}',
+        _tr(
+          context,
+          fr:
+              'Manqué aujourd’hui à ${formatLocalTime(state.missedAt ?? state.windowEnd)}',
+          en: 'Today missed at ${formatLocalTime(state.missedAt ?? state.windowEnd)}',
+          ar:
+              'فائت اليوم عند ${formatLocalTime(state.missedAt ?? state.windowEnd)}',
+        ),
       CheckInStatus.pending =>
-        'Pending today (${formatLocalTime(state.windowStart)}-${formatLocalTime(state.windowEnd)})',
+        _tr(
+          context,
+          fr:
+              'En attente aujourd’hui (${formatLocalTime(state.windowStart)}-${formatLocalTime(state.windowEnd)})',
+          en:
+              'Pending today (${formatLocalTime(state.windowStart)}-${formatLocalTime(state.windowEnd)})',
+          ar:
+              'معلّق اليوم (${formatLocalTime(state.windowStart)}-${formatLocalTime(state.windowEnd)})',
+        ),
     };
   }
 
-  String _incidentLabel(IncidentFlowStatus status) => switch (status) {
-        IncidentFlowStatus.clear => 'No active incident',
-        IncidentFlowStatus.suspected => 'Suspicious incident open',
-        IncidentFlowStatus.confirmed => 'Confirmed incident open',
-        IncidentFlowStatus.emergency => 'Emergency state',
+  String _incidentLabel(BuildContext context, IncidentFlowStatus status) =>
+      switch (status) {
+        IncidentFlowStatus.clear => _tr(
+            context,
+            fr: 'Aucun incident actif',
+            en: 'No active incident',
+            ar: 'لا يوجد حادث نشط',
+          ),
+        IncidentFlowStatus.suspected => _tr(
+            context,
+            fr: 'Incident suspect en cours',
+            en: 'Suspicious incident open',
+            ar: 'حادث مشتبه به مفتوح',
+          ),
+        IncidentFlowStatus.confirmed => _tr(
+            context,
+            fr: 'Incident confirmé en cours',
+            en: 'Confirmed incident open',
+            ar: 'حادث مؤكد مفتوح',
+          ),
+        IncidentFlowStatus.emergency => _tr(
+            context,
+            fr: 'État d’urgence',
+            en: 'Emergency state',
+            ar: 'حالة طوارئ',
+          ),
       };
 }
 
@@ -242,16 +377,39 @@ class _GlobalStatusCard extends StatelessWidget {
             runSpacing: AppSpacing.sm,
             children: [
               _Metric(
-                  label: 'Pending alerts',
+                  label: _tr(
+                    context,
+                    fr: 'Alertes en attente',
+                    en: 'Pending alerts',
+                    ar: 'تنبيهات معلقة',
+                  ),
                   value: pendingAlerts,
                   highlight: pendingAlerts > 0),
-              _Metric(label: 'Today check-ins', value: todayCheckIns),
               _Metric(
-                  label: 'Missed meds',
+                label: _tr(
+                  context,
+                  fr: 'Check-ins du jour',
+                  en: 'Today check-ins',
+                  ar: 'تأكيدات اليوم',
+                ),
+                value: todayCheckIns,
+              ),
+              _Metric(
+                  label: _tr(
+                    context,
+                    fr: 'Médicaments manqués',
+                    en: 'Missed meds',
+                    ar: 'أدوية فائتة',
+                  ),
                   value: missedMedications,
                   highlight: missedMedications > 0),
               _Metric(
-                  label: 'Open incidents',
+                  label: _tr(
+                    context,
+                    fr: 'Incidents ouverts',
+                    en: 'Open incidents',
+                    ar: 'حوادث مفتوحة',
+                  ),
                   value: openIncidents,
                   highlight: openIncidents > 0),
             ],
@@ -316,7 +474,7 @@ class _QuickActionRow extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onAlerts,
             icon: const Icon(Icons.notifications_active_outlined),
-            label: const Text('Alerts'),
+            label: Text(_tr(context, fr: 'Alertes', en: 'Alerts', ar: 'التنبيهات')),
           ),
         ),
         Gaps.h8,
@@ -324,7 +482,7 @@ class _QuickActionRow extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onTimeline,
             icon: const Icon(Icons.timeline_outlined),
-            label: const Text('Timeline'),
+            label: Text(_tr(context, fr: 'Chronologie', en: 'Timeline', ar: 'التسلسل')),
           ),
         ),
         Gaps.h8,
@@ -332,7 +490,7 @@ class _QuickActionRow extends StatelessWidget {
           child: OutlinedButton.icon(
             onPressed: onProfile,
             icon: const Icon(Icons.person_outline),
-            label: const Text('Senior'),
+            label: Text(_tr(context, fr: 'Senior', en: 'Senior', ar: 'المسن')),
           ),
         ),
       ],
@@ -356,13 +514,18 @@ class _TopAlertsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionTitle(
-            title: 'Top alerts',
-            actionLabel: 'View all',
+            title: _tr(context, fr: 'Alertes prioritaires', en: 'Top alerts', ar: 'أهم التنبيهات'),
+            actionLabel: _tr(context, fr: 'Voir tout', en: 'View all', ar: 'عرض الكل'),
             onAction: onOpenAlerts,
           ),
           if (alerts.isEmpty)
             Text(
-              'No alerts right now.',
+              _tr(
+                context,
+                fr: 'Aucune alerte pour le moment.',
+                en: 'No alerts right now.',
+                ar: 'لا توجد تنبيهات الآن.',
+              ),
               style: Theme.of(context).textTheme.bodyMedium,
             )
           else
@@ -400,13 +563,24 @@ class _RecentEventsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SectionTitle(
-            title: 'Recent important events',
-            actionLabel: 'Timeline',
+            title: _tr(
+              context,
+              fr: 'Événements importants récents',
+              en: 'Recent important events',
+              ar: 'الأحداث المهمة الأخيرة',
+            ),
+            actionLabel:
+                _tr(context, fr: 'Chronologie', en: 'Timeline', ar: 'التسلسل'),
             onAction: onOpenTimeline,
           ),
           if (events.isEmpty)
             Text(
-              'No important events yet.',
+              _tr(
+                context,
+                fr: 'Aucun événement important pour le moment.',
+                en: 'No important events yet.',
+                ar: 'لا توجد أحداث مهمة بعد.',
+              ),
               style: Theme.of(context).textTheme.bodyMedium,
             )
           else
