@@ -54,7 +54,7 @@ class AppConfig {
       voiceGatewayMode: VoiceGatewayMode.fromRaw(
         const String.fromEnvironment(
           'VOICE_GATEWAY_MODE',
-          defaultValue: 'gateway',
+          defaultValue: 'local_fallback',
         ),
       ),
     );

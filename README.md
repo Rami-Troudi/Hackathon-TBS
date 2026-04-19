@@ -51,7 +51,8 @@ Included:
   - voice gateway client in `core/voice` sends recorded audio plus compact local context
   - target gateway pipeline: Tunisian Arabic STT (`linagora/linto-asr-ar-tn-0.1`) -> local LLM -> Sawti TTS WAV response
   - when voice gateway calls fail, senior companion falls back to deterministic local text guidance
-  - optional QA mode (`VOICE_GATEWAY_MODE=local_fallback`) bypasses the gateway and returns deterministic local WAV + text guidance for offline roundtrip demos
+  - local fallback mode is the default (`VOICE_GATEWAY_MODE=local_fallback`) and bypasses the gateway with deterministic local WAV + text guidance for reliable offline demos
+  - external gateway testing is opt-in via `VOICE_GATEWAY_MODE=gateway`
   - deterministic repositories remain source of truth; the voice service only receives grounded context for the current question
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
@@ -110,25 +111,25 @@ fvm flutter run --dart-define=APP_ENV=dev
 
 Valid values: `dev`, `staging`, `prod`.
 
-Voice gateway configuration:
+Voice gateway testing (explicit opt-in):
 
 ```bash
 fvm flutter run \
   --dart-define=APP_ENV=dev \
+  --dart-define=VOICE_GATEWAY_MODE=gateway \
   --dart-define=VOICE_GATEWAY_BASE_URL=https://xqdrant.moetezfradi.me
 ```
 
-`VOICE_GATEWAY_BASE_URL` defaults to `https://xqdrant.moetezfradi.me`. If the gateway later requires an app-level key, pass `VOICE_GATEWAY_API_KEY`, but keep Sawti and model-provider secrets on the gateway server only.
+`VOICE_GATEWAY_MODE` now defaults to `local_fallback`. Set `VOICE_GATEWAY_MODE=gateway` to opt into external STT/TTS testing. `VOICE_GATEWAY_BASE_URL` defaults to `https://xqdrant.moetezfradi.me`. If the gateway later requires an app-level key, pass `VOICE_GATEWAY_API_KEY`, but keep Sawti and model-provider secrets on the gateway server only.
 
-QA-only contingency mode (non-production fallback):
+Default demo mode (local fallback):
 
 ```bash
 fvm flutter run \
-  --dart-define=APP_ENV=dev \
-  --dart-define=VOICE_GATEWAY_MODE=local_fallback
+  --dart-define=APP_ENV=dev
 ```
 
-`VOICE_GATEWAY_MODE=local_fallback` keeps the flow local-first and bypasses network voice calls so `/senior/companion` can complete start -> record -> send -> play even when the external gateway is unavailable.
+You can also force it explicitly with `--dart-define=VOICE_GATEWAY_MODE=local_fallback`. Local fallback keeps the flow local-first and bypasses network voice calls so `/senior/companion` can complete start -> record -> send -> play even when the external gateway is unavailable.
 
 ## Onboarding + session flow (G1)
 

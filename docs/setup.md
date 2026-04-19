@@ -72,15 +72,27 @@ The Flutter app does not contain model-provider or Sawti credentials. It records
 senior audio and posts it to the configured gateway. The gateway owns STT, LLM
 reasoning, and TTS.
 
+Gateway mode is now opt-in. Local fallback runs by default for demo reliability.
+
 ```bash
 fvm flutter run \
   --dart-define=APP_ENV=dev \
+  --dart-define=VOICE_GATEWAY_MODE=gateway \
   --dart-define=VOICE_GATEWAY_BASE_URL=https://xqdrant.moetezfradi.me
 ```
 
 `VOICE_GATEWAY_BASE_URL` defaults to the current demo gateway. Only use
 `VOICE_GATEWAY_API_KEY` if the gateway is configured to require an app-level key.
 Do not put Sawti API keys in Flutter.
+
+To run in the default local fallback mode:
+
+```bash
+fvm flutter run --dart-define=APP_ENV=dev
+```
+
+You can also force fallback explicitly with
+`--dart-define=VOICE_GATEWAY_MODE=local_fallback`.
 
 ### Run on a specific device
 
@@ -392,9 +404,8 @@ the generated local APK for hackathon testing and video capture.
   shipped microphone recording plugin requires API 23+.
 - Location permission is only needed for the safe-zone prototype flow. The app
   does not implement background geofencing.
-- The senior voice companion requires network access to the configured voice
-  gateway. If gateway calls fail, the companion falls back to deterministic
-  local text guidance.
+- Local fallback is the default for the senior voice companion. Network access
+  is only required when you explicitly set `VOICE_GATEWAY_MODE=gateway`.
 - Guardian insights are available without network and stay grounded in local
   summaries, alerts, timeline, and status.
 - Before recording, run **Settings → Reset demo data**, complete onboarding, and

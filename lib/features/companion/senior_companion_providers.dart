@@ -87,7 +87,7 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
       state = state.copyWith(
         status: VoiceInteractionStatus.unavailable,
         errorMessage:
-            'Voice gateway is not configured. Set VOICE_GATEWAY_BASE_URL or VOICE_GATEWAY_MODE=local_fallback.',
+            'Voice gateway is not configured. Local fallback runs by default. To test the external gateway, set VOICE_GATEWAY_MODE=gateway and VOICE_GATEWAY_BASE_URL.',
       );
       return;
     }

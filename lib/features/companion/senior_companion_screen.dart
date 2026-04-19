@@ -90,7 +90,7 @@ class SeniorCompanionScreen extends ConsumerWidget {
           Gaps.v24,
           const AppCard(
             child: Text(
-              'The assistant uses the configured voice gateway by default. QA mode can force a local deterministic fallback response. App data remains local source of truth.',
+              'Local fallback is active by default for reliable demos. To test the external gateway, set VOICE_GATEWAY_MODE=gateway (and VOICE_GATEWAY_BASE_URL if needed). App data remains local source of truth.',
             ),
           ),
         ],
@@ -119,7 +119,7 @@ class SeniorCompanionScreen extends ConsumerWidget {
         'Your question is being processed by the voice assistant.',
       VoiceInteractionStatus.playing => 'Playing the assistant response.',
       VoiceInteractionStatus.unavailable =>
-        'Configure VOICE_GATEWAY_BASE_URL or use VOICE_GATEWAY_MODE=local_fallback for QA-only local roundtrip tests.',
+        'Local fallback is the default mode. To use the external gateway, set VOICE_GATEWAY_MODE=gateway and configure VOICE_GATEWAY_BASE_URL.',
       VoiceInteractionStatus.error =>
         'Check microphone permission, network access, or gateway availability.',
     };
