@@ -65,8 +65,7 @@ class VoiceGatewayClient {
       throw StateError('Voice gateway is not configured.');
     }
 
-    final endpoint =
-        Uri.parse(config.voiceGatewayBaseUrl).resolve('/voice').toString();
+    final endpoint = _voiceEndpoint(config.voiceGatewayBaseUrl);
     final data = FormData.fromMap(<String, dynamic>{
       'file': await MultipartFile.fromFile(
         audioFilePath,
@@ -105,6 +104,16 @@ class VoiceGatewayClient {
 
     final outputPath = await _writeResponseBytes(bytes);
     return VoiceGatewayAudioResponse(audioFilePath: outputPath);
+  }
+
+  String _voiceEndpoint(String baseUrl) {
+    final parsed = Uri.parse(baseUrl.trim());
+    final normalizedPath = parsed.path.endsWith('/')
+        ? parsed.path
+        : parsed.path.isEmpty
+            ? '/'
+            : '${parsed.path}/';
+    return parsed.replace(path: '${normalizedPath}voice').toString();
   }
 
   Future<VoiceGatewayAudioResponse> _buildLocalFallbackResponse(

@@ -113,6 +113,36 @@ void main() {
     );
   });
 
+  test('posts to /voice while preserving base path segments', () async {
+    final audioPath = await _createWavFile();
+    addTearDown(() => File(audioPath).delete());
+
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    addTearDown(server.close);
+
+    var observedPath = '';
+    server.listen((request) async {
+      observedPath = request.uri.path;
+      await request.drain();
+      request.response.statusCode = 200;
+      request.response.add(List<int>.filled(128, 1));
+      await request.response.close();
+    });
+
+    final client = _clientFor(
+      'http://${server.address.address}:${server.port}/gateway/v1',
+    );
+
+    final response = await client.sendVoice(
+      audioFilePath: audioPath,
+      audience: VoiceAudience.senior,
+      appContext: const <String, dynamic>{'source': 'test'},
+    );
+    addTearDown(() => File(response.audioFilePath).delete());
+
+    expect(observedPath, '/gateway/v1/voice');
+  });
+
   test('maps 500 gateway responses to server error', () async {
     final audioPath = await _createWavFile();
     addTearDown(() => File(audioPath).delete());
