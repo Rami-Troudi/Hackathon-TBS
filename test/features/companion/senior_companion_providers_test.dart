@@ -1,79 +1,117 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
-import 'package:senior_companion/core/ai/ai_assistant_repository.dart';
-import 'package:senior_companion/core/ai/ai_response.dart';
+import 'package:senior_companion/core/voice/voice_companion_repository.dart';
+import 'package:senior_companion/core/voice/voice_interaction.dart';
+import 'package:senior_companion/core/voice/voice_playback_service.dart';
+import 'package:senior_companion/core/voice/voice_recording_service.dart';
 import 'package:senior_companion/features/companion/senior_companion_providers.dart';
-import 'package:senior_companion/shared/models/assistant_message.dart';
-import 'package:senior_companion/shared/models/assistant_suggestion.dart';
 
-class _FakeAiAssistantRepository implements AiAssistantRepository {
-  int seniorAskCalls = 0;
-
-  @override
-  Future<AiResponse> askGuardian(
-    String userMessage, {
-    List<AssistantMessage> history = const <AssistantMessage>[],
-  }) {
-    throw UnimplementedError();
-  }
+class _FakeVoiceCompanionRepository implements VoiceCompanionRepository {
+  int calls = 0;
+  String? receivedPath;
 
   @override
-  Future<AiResponse> askSenior(
-    String userMessage, {
-    List<AssistantMessage> history = const <AssistantMessage>[],
-  }) async {
-    seniorAskCalls += 1;
-    return AiResponse(
-      answerText: 'Senior fallback answer for: $userMessage',
-      source: AiResponseSource.fallback,
-      referencedFacts: const <String>['Status: Watch'],
-      suggestions: const <AssistantSuggestion>[
-        AssistantSuggestion(
-          label: 'What reminders are left?',
-          prompt: 'What reminders are left today?',
-        ),
-      ],
+  bool get isConfigured => true;
+
+  @override
+  Future<VoiceInteractionResult> askSeniorWithAudio(
+    String audioFilePath,
+  ) async {
+    calls += 1;
+    receivedPath = audioFilePath;
+    return const VoiceInteractionResult(
+      responseAudioPath: '/tmp/voice-response.wav',
     );
   }
+}
+
+class _FakeVoiceRecordingService implements VoiceRecordingService {
+  bool recording = false;
 
   @override
-  Future<AiResponse> buildGuardianWelcome() {
-    throw UnimplementedError();
+  Future<void> dispose() async {}
+
+  @override
+  Future<bool> hasPermission() async => true;
+
+  @override
+  Future<bool> isRecording() async => recording;
+
+  @override
+  Future<String> start() async {
+    recording = true;
+    return '/tmp/voice-request.wav';
   }
 
   @override
-  Future<AiResponse> buildSeniorWelcome() async => const AiResponse(
-        answerText: 'Welcome senior companion',
-        source: AiResponseSource.fallback,
-        suggestions: <AssistantSuggestion>[
-          AssistantSuggestion(
-            label: 'What should I do now?',
-            prompt: 'What should I do now?',
-          ),
-        ],
-      );
+  Future<String?> stop() async {
+    recording = false;
+    return '/tmp/voice-request.wav';
+  }
+}
+
+class _FakeVoicePlaybackService implements VoicePlaybackService {
+  String? playedPath;
+
+  @override
+  Future<void> dispose() async {}
+
+  @override
+  Future<void> playFile(String path) async {
+    playedPath = path;
+  }
+
+  @override
+  Future<void> stop() async {}
 }
 
 void main() {
-  test('senior companion provider initializes and answers user question',
+  test('senior companion records audio, sends it, and plays response',
       () async {
-    final fakeRepository = _FakeAiAssistantRepository();
+    final repository = _FakeVoiceCompanionRepository();
+    final recorder = _FakeVoiceRecordingService();
+    final playback = _FakeVoicePlaybackService();
     final container = ProviderContainer(
       overrides: [
-        aiAssistantRepositoryProvider.overrideWithValue(fakeRepository),
+        voiceCompanionRepositoryProvider.overrideWithValue(repository),
+        voiceGatewayConfiguredProvider.overrideWithValue(true),
+        voiceRecordingServiceProvider.overrideWithValue(recorder),
+        voicePlaybackServiceProvider.overrideWithValue(playback),
       ],
     );
     addTearDown(container.dispose);
 
     final notifier = container.read(seniorCompanionControllerProvider.notifier);
-    await notifier.ensureInitialized();
-    await notifier.sendText('What should I do now?');
+    await notifier.startListening();
+
+    expect(
+      container.read(seniorCompanionControllerProvider).status,
+      VoiceInteractionStatus.listening,
+    );
+
+    await notifier.stopAndSend();
 
     final state = container.read(seniorCompanionControllerProvider);
-    expect(state.messages.length, 3);
-    expect(state.messages.first.text, contains('Welcome senior companion'));
-    expect(state.messages.last.text, contains('Senior fallback answer'));
-    expect(fakeRepository.seniorAskCalls, 1);
+    expect(state.status, VoiceInteractionStatus.idle);
+    expect(state.lastRequestPath, '/tmp/voice-request.wav');
+    expect(state.lastResponsePath, '/tmp/voice-response.wav');
+    expect(repository.calls, 1);
+    expect(repository.receivedPath, '/tmp/voice-request.wav');
+    expect(playback.playedPath, '/tmp/voice-response.wav');
+  });
+
+  test('senior companion is unavailable when gateway is not configured',
+      () async {
+    final container = ProviderContainer(
+      overrides: [
+        voiceGatewayConfiguredProvider.overrideWithValue(false),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final state = container.read(seniorCompanionControllerProvider);
+
+    expect(state.status, VoiceInteractionStatus.unavailable);
   });
 }

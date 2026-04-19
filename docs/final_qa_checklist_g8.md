@@ -29,7 +29,7 @@ Use this checklist before handing off the final prototype or recording a demo.
 - [ ] Hydration complete/missed state updates.
 - [ ] Nutrition complete/missed state updates.
 - [ ] Senior summary reflects real local events.
-- [ ] Senior Companion initializes in fallback mode without external AI.
+- [ ] Senior Companion requests microphone permission and can send audio to the configured gateway.
 
 ## Guardian Flows
 
@@ -39,7 +39,7 @@ Use this checklist before handing off the final prototype or recording a demo.
 - [ ] Timeline shows persisted events and filters correctly.
 - [ ] Check-in, medication, incident, hydration, nutrition, location, profile,
   summary, and insights entry points are reachable.
-- [ ] Guardian Insights initializes in fallback mode without external AI.
+- [ ] Guardian Insights clearly links to deterministic alerts, timeline, and summaries without AI chat controls.
 
 ## Safe-Zone Prototype
 

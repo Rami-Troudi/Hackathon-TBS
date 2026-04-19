@@ -133,9 +133,10 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
         todayMissedMealCount;
     final routineCriticalThreshold =
         _routineCriticalThreshold(alertSensitivity);
-    final missedRoutineSeverity = warningSignalsToday >= routineCriticalThreshold
-        ? GuardianAlertSeverity.critical
-        : GuardianAlertSeverity.warning;
+    final missedRoutineSeverity =
+        warningSignalsToday >= routineCriticalThreshold
+            ? GuardianAlertSeverity.critical
+            : GuardianAlertSeverity.warning;
 
     if (todayMissedMedication != null) {
       alerts.add(

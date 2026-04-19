@@ -201,7 +201,8 @@ class LocalHydrationRepository implements HydrationRepository {
       reference: reference,
     );
     return events.any(
-      (event) => event.payload['slotLabel'] == slotLabel && types.contains(event.type),
+      (event) =>
+          event.payload['slotLabel'] == slotLabel && types.contains(event.type),
     );
   }
 

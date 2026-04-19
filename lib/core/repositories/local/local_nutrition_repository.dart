@@ -196,7 +196,8 @@ class LocalNutritionRepository implements NutritionRepository {
       reference: reference,
     );
     return events.any(
-      (event) => event.payload['mealLabel'] == mealLabel && types.contains(event.type),
+      (event) =>
+          event.payload['mealLabel'] == mealLabel && types.contains(event.type),
     );
   }
 

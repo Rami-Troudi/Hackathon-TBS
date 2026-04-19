@@ -315,11 +315,12 @@ class BigAction extends StatelessWidget {
   final String label;
   final String subtitle;
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final BigActionTone tone;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
     final background = switch (tone) {
       BigActionTone.primary => AppColors.primary,
       BigActionTone.destructive => AppColors.critical,
@@ -334,53 +335,56 @@ class BigAction extends StatelessWidget {
       _ => Colors.white.withOpacity(0.16),
     };
 
-    return SizedBox(
-      width: double.infinity,
-      height: 132,
-      child: Material(
-        color: background,
-        borderRadius: BorderRadius.circular(28),
-        child: InkWell(
+    return Opacity(
+      opacity: enabled ? 1 : 0.55,
+      child: SizedBox(
+        width: double.infinity,
+        height: 132,
+        child: Material(
+          color: background,
           borderRadius: BorderRadius.circular(28),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              children: [
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: iconBackground,
-                    borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(28),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: iconBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(icon, color: foreground, size: 30),
                   ),
-                  child: Icon(icon, color: foreground, size: 30),
-                ),
-                Gaps.h16,
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: Theme.of(context)
-                            .textTheme
-                            .headlineSmall
-                            ?.copyWith(color: foreground),
-                      ),
-                      Gaps.v4,
-                      Text(
-                        subtitle,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium
-                            ?.copyWith(color: foreground.withOpacity(0.86)),
-                      ),
-                    ],
+                  Gaps.h16,
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(color: foreground),
+                        ),
+                        Gaps.v4,
+                        Text(
+                          subtitle,
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(color: foreground.withOpacity(0.86)),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

@@ -138,8 +138,8 @@ void main() {
   });
 
   test('can mark hydration completed after an auto-missed slot', () async {
-    final tempDir =
-        await Directory.systemTemp.createTemp('senior-companion-hydration-late');
+    final tempDir = await Directory.systemTemp
+        .createTemp('senior-companion-hydration-late');
     final initializer = HiveInitializer(
       hive: Hive,
       initFunction: () async => Hive.init(tempDir.path),
@@ -175,7 +175,8 @@ void main() {
       reconcileMissedSlots: false,
     );
 
-    final morning = state.slots.firstWhere((slot) => slot.id == 'hydration-morning');
+    final morning =
+        state.slots.firstWhere((slot) => slot.id == 'hydration-morning');
     expect(completed, isTrue);
     expect(morning.status, HydrationSlotStatus.completed);
 

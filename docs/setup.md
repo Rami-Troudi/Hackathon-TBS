@@ -63,23 +63,24 @@ Supported `APP_ENV` values:
 | `staging` | `https://staging.prototype.local` | Enabled (debug builds) |
 | `prod` | `https://api.prototype.local` | Disabled |
 
-> **Note:** All product APIs remain local-first in Group 0/G1/G2/G3/G4/G5/G7.
-> Dio is scaffolded for future use only.
+> **Note:** Product data remains local-first. The only external runtime service
+> used by the demo app is the optional senior voice gateway.
 
-### Optional AI provider mode (G7)
+### Senior voice gateway
 
-The AI layer works without external configuration (deterministic fallback mode).
-To enable optional external AI responses:
+The Flutter app does not contain model-provider or Sawti credentials. It records
+senior audio and posts it to the configured gateway. The gateway owns STT, LLM
+reasoning, and TTS.
 
 ```bash
 fvm flutter run \
-  --dart-define=AI_PROVIDER=openai_compatible \
-  --dart-define=AI_API_KEY=your_key_here \
-  --dart-define=AI_MODEL=gpt-4o-mini \
-  --dart-define=AI_BASE_URL=https://api.openai.com/v1
+  --dart-define=APP_ENV=dev \
+  --dart-define=VOICE_GATEWAY_BASE_URL=https://xqdrant.moetezfradi.me
 ```
 
-If these defines are missing, companion/insights screens still work using grounded local fallback.
+`VOICE_GATEWAY_BASE_URL` defaults to the current demo gateway. Only use
+`VOICE_GATEWAY_API_KEY` if the gateway is configured to require an app-level key.
+Do not put Sawti API keys in Flutter.
 
 ### Run on a specific device
 
@@ -118,7 +119,7 @@ to the matching role experience.
 
 ---
 
-## Senior feature flow (G3 + G5 wellbeing + G7 companion)
+## Senior feature flow (G3 + G5 wellbeing + voice companion)
 
 After onboarding with a senior profile:
 
@@ -135,7 +136,7 @@ After onboarding with a senior profile:
 
 ---
 
-## Guardian feature flow (G4 + G5 expansion + G7 insights)
+## Guardian feature flow (G4 + G5 expansion + deterministic insights handoff)
 
 After onboarding with a guardian profile:
 
@@ -223,12 +224,8 @@ Current targeted tests (G2 + G3 + G4 + G5 + G7 + G8):
 - `test/core/repositories/local_summary_repository_test.dart` (deterministic summary derivation)
 - `test/features/hydration/hydration_screen_test.dart` (senior hydration action wiring)
 - `test/features/hydration/guardian_hydration_screen_test.dart` (guardian hydration monitoring UI)
-- `test/core/ai/ai_context_builder_test.dart` (AI grounding context assembly)
-- `test/core/ai/ai_prompt_fallback_test.dart` (prompt + fallback behavior)
-- `test/core/ai/alert_explanation_service_test.dart` (alert explanation grounding)
-- `test/core/ai/status_explanation_service_test.dart` (status explanation grounding)
-- `test/features/companion/senior_companion_providers_test.dart` (senior companion provider flow)
-- `test/features/companion/guardian_insights_providers_test.dart` (guardian insights provider flow)
+- `test/core/ai/ai_context_builder_test.dart` (local context assembly for voice grounding)
+- `test/features/companion/senior_companion_providers_test.dart` (senior voice companion recording/send/playback flow)
 - `test/core/notifications/app_event_notification_dispatcher_test.dart` (event-to-notification policy)
 
 ---
@@ -285,7 +282,7 @@ fvm flutter clean && fvm flutter pub get
   for diagnostics and manual scenario setup.
 - **G5 wellbeing + safety modules.** Hydration, nutrition, safe-zone location, and daily summaries are deterministic and local-first only.
   No backend/cloud auth/data layer is introduced in G5.
-- **G7 AI safety and grounding.** Companion/insights responses are derived from local repositories/status/alerts/summaries. No diagnosis, no invented events, and deterministic fallback stays available when no provider is configured.
+- **Voice companion grounding.** Senior voice requests include compact local context from repositories/status/alerts/summaries. No diagnosis, no invented events, and no AI-owned alert/status decisions.
 - **G8 notification wiring.** Product notifications are triggered centrally from persisted events through `AppEventRecorder` + `AppEventNotificationDispatcher`. Widgets do not own alert notification policy.
 
 ---
@@ -388,10 +385,13 @@ the generated local APK for hackathon testing and video capture.
 
 - Android notification permission should be granted from **Settings** before
   notification scenarios are recorded.
+- Android APK builds use `compileSdk = 35` and `minSdk = 23` because the
+  shipped microphone recording plugin requires API 23+.
 - Location permission is only needed for the safe-zone prototype flow. The app
   does not implement background geofencing.
-- External AI dart-defines are optional. If omitted, companion and guardian
-  insights use deterministic local fallback responses.
+- The senior voice companion requires network access to the configured voice
+  gateway. Guardian insights are intentionally deterministic links to alerts,
+  timeline, and summaries until a compatible guardian/text endpoint exists.
 - Before recording, run **Settings → Reset demo data**, complete onboarding, and
   then use either senior flows or Developer Hub event buttons to prepare the
   scenario.

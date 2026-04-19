@@ -11,18 +11,19 @@ fvm flutter analyze
 fvm flutter test
 ```
 
-Use fallback AI mode by default. External AI is optional and not required for
-the demo.
+The senior voice companion uses the configured voice gateway. The current demo
+gateway is the default value in the app config.
 
-Optional external AI run:
+Explicit voice gateway run:
 
 ```bash
 fvm flutter run \
-  --dart-define=AI_PROVIDER=openai_compatible \
-  --dart-define=AI_API_KEY=your_key_here \
-  --dart-define=AI_MODEL=gpt-4o-mini \
-  --dart-define=AI_BASE_URL=https://api.openai.com/v1
+  --dart-define=APP_ENV=dev \
+  --dart-define=VOICE_GATEWAY_BASE_URL=https://xqdrant.moetezfradi.me
 ```
+
+Do not pass Sawti credentials to Flutter. Sawti keys and model-provider
+configuration belong on the voice gateway server.
 
 ## 2. Build and Install on Android
 
@@ -41,8 +42,16 @@ adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
 The app label should appear as **Senior Companion**.
+Android builds currently target `compileSdk = 35` and require `minSdk = 23`
+because microphone recording is part of the senior voice companion.
 
 ## 3. Permissions
+
+Grant these when prompted or from app settings:
+
+- notifications, for local alert notifications
+- microphone, for the senior voice companion
+- location, only for safe-zone prototype validation
 
 Open **Settings** in the app before recording permission-sensitive scenarios.
 
@@ -81,8 +90,8 @@ Recommended before a clean demo:
    - Show the simple home screen.
    - Tap **I'm okay**.
    - Open hydration or nutrition and mark one routine complete.
-   - Open Companion and ask what to do next. If no AI provider is configured,
-     point out the grounded fallback response.
+   - Open Companion, grant microphone permission, ask a short voice question,
+     and play the returned audio response.
 
 3. **Incident/help flow**
    - Open incident/help.
@@ -94,7 +103,8 @@ Recommended before a clean demo:
    - Switch role from Settings or onboard as guardian.
    - Show dashboard status, alerts, timeline, and related monitoring screens.
    - Acknowledge or resolve an alert.
-   - Open Guardian Insights and ask what needs attention.
+   - Open Guardian Insights and show that guardian guidance stays on
+     deterministic alerts, timeline, and summaries in this build.
 
 5. **Wellbeing and safe-zone expansion**
    - Show hydration/nutrition monitoring.
@@ -114,13 +124,12 @@ Fast scenario setup:
 - Use Settings role switch to move between senior and guardian views on one
   demo device.
 
-## 7. AI Fallback Flow
+## 7. Voice Gateway Backup Flow
 
-If no external AI provider is configured:
-- Senior Companion still answers from local check-ins, medication, hydration,
-  nutrition, safe-zone status, incidents, and summaries.
-- Guardian Insights still explains local alerts/status using deterministic
-  fallback services.
+If the voice gateway is unavailable during a live demo:
+- Show the senior companion screen and explain the endpoint requirement.
+- Continue the demo through deterministic local summaries, alerts, and timeline.
+- Do not claim offline AI behavior; the app no longer ships a local AI fallback.
 - The app should never invent events or make medical claims.
 
 ## 8. Known Prototype Limits During Demo

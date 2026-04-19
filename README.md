@@ -1,6 +1,6 @@
 # Senior Companion — Final Prototype (G0→G8)
 
-This repository contains the final hackathon prototype through **G8**: a runnable local-first Flutter app with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, grounded AI companion/insights, notification wiring, native permission configuration, and final demo documentation.
+This repository contains the final hackathon prototype through **G8**: a runnable local-first Flutter app with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, senior voice companion integration, notification wiring, native permission configuration, and final demo documentation.
 
 ## Scope of this prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7 + G8)
 
@@ -45,17 +45,12 @@ Included:
   - deterministic summaries (`/senior/summary`, `/guardian/summary`)
   - guardian hydration/nutrition monitoring (`/guardian/hydration`, `/guardian/nutrition`)
   - expanded guardian alert rules for hydration/nutrition misses and unresolved safe-zone exits
-- G7 AI companion + smart insights expansion:
-  - senior companion screen (`/senior/companion`) with grounded Q&A and suggestion chips
-  - guardian insights screen (`/guardian/insights`) with alert/status explanations and contextual guidance
-  - AI orchestration layer in `core/ai`:
-    - context builder from real local repositories
-    - prompt builder
-    - provider adapter abstraction
-    - deterministic fallback service (works with no API key/provider)
-    - alert/status explanation services
-  - optional external provider mode via dart-defines (no backend required)
-  - deterministic repositories remain source of truth; AI only explains/rephrases/suggests
+- Voice companion integration:
+  - senior voice companion screen (`/senior/companion`) with microphone-first access
+  - voice gateway client in `core/voice` sends recorded audio plus compact local context
+  - target gateway pipeline: Tunisian Arabic STT (`linagora/linto-asr-ar-tn-0.1`) -> local LLM -> Sawti TTS WAV response
+  - guardian insights route remains a deterministic handoff screen until a guardian/text endpoint exists
+  - deterministic repositories remain source of truth; the voice service only receives grounded context for the current question
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
   - `Hive` for structured entities (profiles, links, event records, medication plans, safe zones, runtime location state, future entities)
@@ -71,7 +66,7 @@ Not included:
 - Docker/devops
 - Server-side database infrastructure
 - Cloud auth
-- mandatory backend/cloud AI infrastructure
+- in-app AI provider keys or direct Sawti credentials
 - Full business-domain features
 
 ## Stack
@@ -84,6 +79,8 @@ Not included:
 - Hive + hive_flutter
 - flutter_local_notifications
 - permission_handler (lightweight permissions helper)
+- record
+- just_audio
 
 ## Quick start
 
@@ -111,18 +108,15 @@ fvm flutter run --dart-define=APP_ENV=dev
 
 Valid values: `dev`, `staging`, `prod`.
 
-Optional AI configuration (G7 external mode):
+Voice gateway configuration:
 
 ```bash
 fvm flutter run \
   --dart-define=APP_ENV=dev \
-  --dart-define=AI_PROVIDER=openai_compatible \
-  --dart-define=AI_API_KEY=your_key_here \
-  --dart-define=AI_MODEL=gpt-4o-mini \
-  --dart-define=AI_BASE_URL=https://api.openai.com/v1
+  --dart-define=VOICE_GATEWAY_BASE_URL=https://xqdrant.moetezfradi.me
 ```
 
-If AI provider settings are omitted, the app uses deterministic local fallback responses.
+`VOICE_GATEWAY_BASE_URL` defaults to `https://xqdrant.moetezfradi.me`. If the gateway later requires an app-level key, pass `VOICE_GATEWAY_API_KEY`, but keep Sawti and model-provider secrets on the gateway server only.
 
 ## Onboarding + session flow (G1)
 
@@ -243,25 +237,21 @@ Group 5 extends the product into a fuller daily companion, while staying local-f
   - `/guardian/location`
   - `/guardian/summary`
 
-## G7 AI Companion + Smart Insights
+## Voice Companion
 
-Group 7 adds a grounded AI layer above existing repositories/events/status/summaries:
+The senior voice companion is the only AI surface in the Flutter app:
 
 - **Senior Companion** (`/senior/companion`)
-  - calm, simple assistant for “what should I do now?”, reminders left, status, and day summary
+  - records senior speech and sends it to the configured voice gateway
+  - gateway performs STT, LLM reasoning, and TTS outside the Flutter app
 - **Guardian Insights** (`/guardian/insights`)
-  - concise assistant for “what changed?”, “what needs attention?”, alert explanations, and adherence snapshots
+  - no chat/AI in this build; links guardians to alerts, timeline, and deterministic summaries
 - **Grounding policy**
   - repositories, status engine, alerts, and deterministic summaries remain factual source of truth
-  - AI output is explanation/guidance only
-- **Fallback mode**
-  - fully functional without any external model configuration
-  - deterministic responses built from real local app context
-- **External mode (optional)**
-  - provider adapter supports OpenAI-compatible chat completions when configured
-  - provider failures automatically degrade to deterministic fallback
+  - the app sends compact context with each voice request
+  - no diagnosis, no invented incidents, and no AI-owned alert/status decisions
 
-### G7 routes
+### Companion routes
 
 - Senior:
   - `/senior/companion`
@@ -365,5 +355,5 @@ lib/
 - `docs/architecture.md` - architecture and extension guidance for next groups
 - `docs/release_readiness_g7_2.md` - current implementation status and non-goals
 - `docs/qa_test_matrix_g7_2.md` - manual QA matrix for demo/validation
-- `docs/demo_runbook_g8.md` - final Android demo setup, scenario, and fallback guide
+- `docs/demo_runbook_g8.md` - final Android demo setup, scenario, and voice gateway guide
 - `docs/final_qa_checklist_g8.md` - final handoff QA checklist

@@ -6,22 +6,17 @@ class AppConfig {
     required this.environment,
     required this.apiBaseUrl,
     required this.enableNetworkLogs,
-    required this.aiProvider,
-    required this.aiApiKey,
-    required this.aiModel,
-    required this.aiBaseUrl,
+    required this.voiceGatewayBaseUrl,
+    required this.voiceGatewayApiKey,
   });
 
   final AppEnvironment environment;
   final String apiBaseUrl;
   final bool enableNetworkLogs;
-  final String aiProvider;
-  final String aiApiKey;
-  final String aiModel;
-  final String aiBaseUrl;
+  final String voiceGatewayBaseUrl;
+  final String voiceGatewayApiKey;
 
-  bool get hasExternalAi =>
-      aiProvider != 'none' && aiApiKey.isNotEmpty && aiModel.isNotEmpty;
+  bool get hasVoiceGateway => voiceGatewayBaseUrl.trim().isNotEmpty;
 
   factory AppConfig.fromEnvironment(AppEnvironment environment) {
     final baseUrl = switch (environment) {
@@ -34,17 +29,12 @@ class AppConfig {
       environment: environment,
       apiBaseUrl: baseUrl,
       enableNetworkLogs: kDebugMode,
-      aiProvider:
-          const String.fromEnvironment('AI_PROVIDER', defaultValue: 'none'),
-      aiApiKey: const String.fromEnvironment('AI_API_KEY', defaultValue: ''),
-      aiModel: const String.fromEnvironment(
-        'AI_MODEL',
-        defaultValue: 'gpt-4o-mini',
+      voiceGatewayBaseUrl: const String.fromEnvironment(
+        'VOICE_GATEWAY_BASE_URL',
+        defaultValue: 'https://xqdrant.moetezfradi.me',
       ),
-      aiBaseUrl: const String.fromEnvironment(
-        'AI_BASE_URL',
-        defaultValue: 'https://api.openai.com/v1',
-      ),
+      voiceGatewayApiKey: const String.fromEnvironment('VOICE_GATEWAY_API_KEY',
+          defaultValue: ''),
     );
   }
 }

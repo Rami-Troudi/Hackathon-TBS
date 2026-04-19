@@ -100,6 +100,7 @@ class _SeniorHomeContent extends ConsumerWidget {
           checkInState: data.checkInState,
           onPrimaryAction: () => _completeCheckIn(context, ref, seniorId),
           onHelpAction: () => _needHelp(context, ref, seniorId),
+          onCompanion: () => context.push(AppRoutes.seniorCompanion),
         ),
         Gaps.v16,
         _TodayRoutineCard(
@@ -113,7 +114,6 @@ class _SeniorHomeContent extends ConsumerWidget {
           onHydration: () => context.push(AppRoutes.seniorHydration),
           onNutrition: () => context.push(AppRoutes.seniorNutrition),
           onSummary: () => context.push(AppRoutes.seniorSummary),
-          onCompanion: () => context.push(AppRoutes.seniorCompanion),
         ),
       ],
     );
@@ -219,11 +219,13 @@ class _PrimaryActionCard extends StatelessWidget {
     required this.checkInState,
     required this.onPrimaryAction,
     required this.onHelpAction,
+    required this.onCompanion,
   });
 
   final CheckInState checkInState;
   final VoidCallback onPrimaryAction;
   final VoidCallback onHelpAction;
+  final VoidCallback onCompanion;
 
   @override
   Widget build(BuildContext context) {
@@ -255,6 +257,14 @@ class _PrimaryActionCard extends StatelessWidget {
           tone: BigActionTone.destructive,
           onTap: onHelpAction,
         ),
+        Gaps.v8,
+        BigAction(
+          label: 'Talk to Companion',
+          subtitle: 'Ask by voice',
+          icon: Icons.mic_outlined,
+          tone: BigActionTone.soft,
+          onTap: onCompanion,
+        ),
       ],
     );
   }
@@ -272,7 +282,6 @@ class _TodayRoutineCard extends StatelessWidget {
     required this.onHydration,
     required this.onNutrition,
     required this.onSummary,
-    required this.onCompanion,
   });
 
   final CheckInState checkInState;
@@ -285,7 +294,6 @@ class _TodayRoutineCard extends StatelessWidget {
   final VoidCallback onHydration;
   final VoidCallback onNutrition;
   final VoidCallback onSummary;
-  final VoidCallback onCompanion;
 
   @override
   Widget build(BuildContext context) {
@@ -328,10 +336,6 @@ class _TodayRoutineCard extends StatelessWidget {
               FilledButton.tonal(
                 onPressed: onMedication,
                 child: const Text('Medication'),
-              ),
-              FilledButton.tonal(
-                onPressed: onCompanion,
-                child: const Text('Companion'),
               ),
               if (!simplifiedModeEnabled)
                 OutlinedButton.icon(

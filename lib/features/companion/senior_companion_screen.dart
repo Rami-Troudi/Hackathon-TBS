@@ -1,231 +1,121 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:senior_companion/core/voice/voice_interaction.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
-import 'package:senior_companion/shared/models/assistant_message.dart';
-import 'package:senior_companion/shared/models/assistant_role.dart';
-import 'package:senior_companion/shared/models/assistant_suggestion.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 
 import 'senior_companion_providers.dart';
 
-class SeniorCompanionScreen extends ConsumerStatefulWidget {
+class SeniorCompanionScreen extends ConsumerWidget {
   const SeniorCompanionScreen({super.key});
 
   @override
-  ConsumerState<SeniorCompanionScreen> createState() =>
-      _SeniorCompanionScreenState();
-}
-
-class _SeniorCompanionScreenState extends ConsumerState<SeniorCompanionScreen> {
-  final TextEditingController _inputController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(seniorCompanionControllerProvider.notifier).ensureInitialized();
-    });
-  }
-
-  @override
-  void dispose() {
-    _inputController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(seniorCompanionControllerProvider);
     final controller = ref.read(seniorCompanionControllerProvider.notifier);
+    final isListening = state.status == VoiceInteractionStatus.listening;
+
     return AppScaffoldShell(
-      title: 'Companion',
+      title: 'Voice Companion',
       role: AppShellRole.senior,
-      child: Column(
+      child: ListView(
         children: [
-          const AppCard(
-            tone: AppCardTone.sage,
-            child: Text(
-              'Ask me simple questions about today, reminders, or your next step.',
+          AppCard(
+            tone: state.status == VoiceInteractionStatus.error
+                ? AppCardTone.warning
+                : AppCardTone.sage,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _headlineFor(state.status),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                Gaps.v8,
+                Text(
+                  _descriptionFor(state.status),
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                if (state.errorMessage != null) ...[
+                  Gaps.v12,
+                  Text(
+                    state.errorMessage!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                  ),
+                ],
+              ],
             ),
+          ),
+          Gaps.v24,
+          BigAction(
+            label: isListening ? 'Stop and send' : 'Talk to Companion',
+            subtitle: isListening
+                ? 'Send your voice question'
+                : 'Ask by voice in Tunisian Arabic or simple language',
+            icon: isListening ? Icons.stop_circle_outlined : Icons.mic_outlined,
+            tone:
+                isListening ? BigActionTone.destructive : BigActionTone.primary,
+            onTap: isListening
+                ? controller.stopAndSend
+                : controller.startListening,
           ),
           Gaps.v12,
-          Expanded(
-            child: ListView.builder(
-              itemCount: state.messages.length + (state.isSending ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index >= state.messages.length) {
-                  return const Padding(
-                    padding: EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: _ThinkingBubble(),
-                  );
-                }
-                final message = state.messages[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: _ChatMessageBubble(
-                    message: message,
-                    onSuggestionTap: (suggestion) async {
-                      await controller.sendSuggestion(suggestion);
-                    },
-                  ),
-                );
-              },
+          if (state.isBusy && !isListening)
+            const Center(child: CircularProgressIndicator()),
+          if (state.lastResponsePath != null) ...[
+            Gaps.v12,
+            BigAction(
+              label: 'Replay answer',
+              subtitle: 'Play the last voice response again',
+              icon: Icons.replay_outlined,
+              tone: BigActionTone.soft,
+              onTap: state.isBusy ? null : controller.replayLastResponse,
             ),
+          ],
+          Gaps.v16,
+          OutlinedButton.icon(
+            onPressed: state.isBusy ? controller.cancel : null,
+            icon: const Icon(Icons.close_outlined),
+            label: const Text('Cancel'),
           ),
-          Gaps.v8,
-          _SuggestionRow(
-            suggestions: state.suggestions,
-            onTap: (suggestion) async {
-              await controller.sendSuggestion(suggestion);
-            },
-          ),
-          Gaps.v8,
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _inputController,
-                  minLines: 1,
-                  maxLines: 3,
-                  textInputAction: TextInputAction.send,
-                  decoration: const InputDecoration(
-                    hintText: 'Ask your companion...',
-                  ),
-                  onSubmitted: (_) => _submit(controller),
-                ),
-              ),
-              Gaps.h8,
-              FilledButton(
-                onPressed: state.isSending ? null : () => _submit(controller),
-                child: const Text('Send'),
-              ),
-            ],
+          Gaps.v24,
+          const AppCard(
+            child: Text(
+              'The assistant listens through the configured voice gateway. App data remains local source of truth; the voice service only receives compact context for the current question.',
+            ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _submit(SeniorCompanionController controller) async {
-    final text = _inputController.text.trim();
-    if (text.isEmpty) return;
-    _inputController.clear();
-    await controller.sendText(text);
+  String _headlineFor(VoiceInteractionStatus status) {
+    return switch (status) {
+      VoiceInteractionStatus.idle => 'Ask by voice',
+      VoiceInteractionStatus.listening => 'Listening...',
+      VoiceInteractionStatus.processing => 'Understanding...',
+      VoiceInteractionStatus.playing => 'Answering...',
+      VoiceInteractionStatus.unavailable => 'Voice companion unavailable',
+      VoiceInteractionStatus.error => 'Voice companion needs attention',
+    };
   }
-}
 
-class _ChatMessageBubble extends StatelessWidget {
-  const _ChatMessageBubble({
-    required this.message,
-    required this.onSuggestionTap,
-  });
-
-  final AssistantMessage message;
-  final Future<void> Function(AssistantSuggestion suggestion) onSuggestionTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isAssistant = message.role == AssistantRole.assistant;
-    return Align(
-      alignment: isAssistant ? Alignment.centerLeft : Alignment.centerRight,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 340),
-        child: AppCard(
-          tone: isAssistant ? AppCardTone.surface : AppCardTone.clay,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(message.text),
-              if (isAssistant && message.referencedFacts.isNotEmpty) ...[
-                Gaps.v8,
-                Text(
-                  'Based on: ${message.referencedFacts.take(2).join(' • ')}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ],
-              if (isAssistant && message.suggestions.isNotEmpty) ...[
-                Gaps.v8,
-                Wrap(
-                  spacing: AppSpacing.xs,
-                  runSpacing: AppSpacing.xs,
-                  children: message.suggestions.take(3).map((suggestion) {
-                    return ActionChip(
-                      label: Text(suggestion.label),
-                      onPressed: () => onSuggestionTap(suggestion),
-                    );
-                  }).toList(growable: false),
-                ),
-              ],
-              if (isAssistant &&
-                  message.suggestions
-                      .any((suggestion) => suggestion.routeHint != null))
-                Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Wrap(
-                    spacing: AppSpacing.xs,
-                    runSpacing: AppSpacing.xs,
-                    children: message.suggestions
-                        .where((suggestion) => suggestion.routeHint != null)
-                        .take(2)
-                        .map((suggestion) => TextButton(
-                              onPressed: () =>
-                                  context.push(suggestion.routeHint!),
-                              child: Text('Open ${suggestion.label}'),
-                            ))
-                        .toList(growable: false),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SuggestionRow extends StatelessWidget {
-  const _SuggestionRow({
-    required this.suggestions,
-    required this.onTap,
-  });
-
-  final List<AssistantSuggestion> suggestions;
-  final Future<void> Function(AssistantSuggestion suggestion) onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: suggestions.take(6).map((suggestion) {
-            return Padding(
-              padding: const EdgeInsets.only(right: AppSpacing.xs),
-              child: FilledButton.tonal(
-                onPressed: () => onTap(suggestion),
-                child: Text(suggestion.label),
-              ),
-            );
-          }).toList(growable: false),
-        ),
-      ),
-    );
-  }
-}
-
-class _ThinkingBubble extends StatelessWidget {
-  const _ThinkingBubble();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Align(
-      alignment: Alignment.centerLeft,
-      child: AppCard(
-        child: Text('Thinking...'),
-      ),
-    );
+  String _descriptionFor(VoiceInteractionStatus status) {
+    return switch (status) {
+      VoiceInteractionStatus.idle =>
+        'Tap the microphone, ask your question, then send it.',
+      VoiceInteractionStatus.listening =>
+        'Speak clearly. Tap stop when you are done.',
+      VoiceInteractionStatus.processing =>
+        'Your question is being processed by the voice assistant.',
+      VoiceInteractionStatus.playing => 'Playing the assistant response.',
+      VoiceInteractionStatus.unavailable =>
+        'The voice gateway URL is missing. Configure VOICE_GATEWAY_BASE_URL.',
+      VoiceInteractionStatus.error =>
+        'Check microphone permission, network access, or gateway availability.',
+    };
   }
 }

@@ -137,8 +137,8 @@ void main() {
   });
 
   test('can mark meal completed after an auto-missed meal', () async {
-    final tempDir =
-        await Directory.systemTemp.createTemp('senior-companion-nutrition-late');
+    final tempDir = await Directory.systemTemp
+        .createTemp('senior-companion-nutrition-late');
     final initializer = HiveInitializer(
       hive: Hive,
       initFunction: () async => Hive.init(tempDir.path),
@@ -174,7 +174,8 @@ void main() {
       reconcileMissedMeals: false,
     );
 
-    final breakfast = state.slots.firstWhere((slot) => slot.id == 'meal-breakfast');
+    final breakfast =
+        state.slots.firstWhere((slot) => slot.id == 'meal-breakfast');
     expect(completed, isTrue);
     expect(breakfast.status, MealSlotStatus.completed);
 

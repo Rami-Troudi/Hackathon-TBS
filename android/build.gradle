@@ -8,6 +8,11 @@ allprojects {
 rootProject.buildDir = "../build"
 subprojects {
     project.buildDir = "${rootProject.buildDir}/${project.name}"
+    if (project.name != "app") {
+        project.ext.flutter = [
+            compileSdkVersion: 35,
+        ]
+    }
 }
 subprojects {
     project.evaluationDependsOn(":app")

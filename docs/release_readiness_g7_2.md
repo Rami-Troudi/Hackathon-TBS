@@ -14,11 +14,11 @@ Senior Companion is currently a **smartphone-first, local-first Flutter prototyp
 - Senior modules: check-in, medication, incident/help, hydration, nutrition, summary
 - Guardian modules: dashboard, alerts, timeline, check-ins, medication, incidents, profile, hydration, nutrition, location/safe-zone, summary
 - Persisted settings and demo reset/reseed controls
-- Bounded AI layer:
+- Historical bounded AI layer (removed after voice-gateway decision):
   - `/senior/companion`
   - `/guardian/insights`
   - grounded context from local repositories
-  - deterministic fallback when no external provider is configured
+  - deterministic local response path when no external provider was configured
 
 ## 2. G7.2 stabilization delivered
 
@@ -37,8 +37,7 @@ Senior Companion is currently a **smartphone-first, local-first Flutter prototyp
 
 - Visual polish pass and broader UX refinements beyond stabilization
 - Dark theme support
-- Additional external AI provider adapters beyond current OpenAI-compatible shape
-- Voice interaction implementation (voice-ready structure exists, feature not shipped)
+- Replacement of the text AI layer with the final voice-gateway integration
 - Any backend/cloud/auth/infra work
 
 ## 4. Known prototype limitations
@@ -46,18 +45,18 @@ Senior Companion is currently a **smartphone-first, local-first Flutter prototyp
 - Local-first only; no backend synchronization.
 - No medical-grade guarantees; incident flow is vigilance support, not certified detection.
 - Safe-zone/location is prototype simulation/manual update flow (no background geofencing service).
-- AI responses are assistive explanations/guidance; deterministic repositories and status logic remain source of truth.
+- AI responses are assistive only; deterministic repositories and status logic remain source of truth.
 - Conversation memory is lightweight session-level behavior, not long-term assistant memory.
 
 ## 5. Demo assumptions
 
 - Demo runs on a configured emulator/simulator or physical phone with Flutter toolchain.
-- Optional AI provider defines may be absent; fallback mode must still be used during demo.
+- This document is historical; current demos use the senior voice gateway documented in `docs/demo_runbook_g8.md`.
 - Demo data can be reseeded/reset from Settings when scenario preparation is needed.
 
-## 6. Manual fallback assumptions
+## 6. Historical degraded-mode assumptions
 
-- If no external AI provider is configured (or provider call fails), companion/insights continues with deterministic grounded responses.
+- These assumptions applied before the final voice-gateway migration and are no longer the active runtime contract.
 - If notification/location permissions are denied, the app remains usable and surfaces explicit next actions (request or open system settings).
 - If connectivity mode is degraded/offline, UI shows local-data messaging and continues operating on persisted local state.
 

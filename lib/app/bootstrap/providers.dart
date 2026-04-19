@@ -2,14 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_router.dart';
-import 'package:senior_companion/core/ai/ai_assistant_repository.dart';
 import 'package:senior_companion/core/ai/ai_context_builder.dart';
-import 'package:senior_companion/core/ai/ai_fallback_service.dart';
-import 'package:senior_companion/core/ai/ai_prompt_builder.dart';
-import 'package:senior_companion/core/ai/ai_provider_adapter.dart';
-import 'package:senior_companion/core/ai/ai_response_parser.dart';
-import 'package:senior_companion/core/ai/alert_explanation_service.dart';
-import 'package:senior_companion/core/ai/status_explanation_service.dart';
 import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/core/config/app_config.dart';
 import 'package:senior_companion/core/events/app_event_bus.dart';
@@ -55,6 +48,11 @@ import 'package:senior_companion/core/repositories/settings_repository.dart';
 import 'package:senior_companion/core/repositories/summary_repository.dart';
 import 'package:senior_companion/core/storage/hive_initializer.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
+import 'package:senior_companion/core/voice/voice_companion_repository.dart';
+import 'package:senior_companion/core/voice/voice_context_payload_builder.dart';
+import 'package:senior_companion/core/voice/voice_gateway_client.dart';
+import 'package:senior_companion/core/voice/voice_playback_service.dart';
+import 'package:senior_companion/core/voice/voice_recording_service.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 
 final appConfigProvider = Provider<AppConfig>(
@@ -274,14 +272,6 @@ final summaryRepositoryProvider = Provider<SummaryRepository>(
   ),
 );
 
-final statusExplanationServiceProvider = Provider<StatusExplanationService>(
-  (_) => const StatusExplanationService(),
-);
-
-final alertExplanationServiceProvider = Provider<AlertExplanationService>(
-  (_) => const AlertExplanationService(),
-);
-
 final aiContextBuilderProvider = Provider<AiContextBuilder>(
   (ref) => AiContextBuilder(
     activeSeniorResolver: ref.watch(activeSeniorResolverProvider),
@@ -301,41 +291,45 @@ final aiContextBuilderProvider = Provider<AiContextBuilder>(
   ),
 );
 
-final aiPromptBuilderProvider = Provider<AiPromptBuilder>(
-  (_) => const AiPromptBuilder(),
-);
-
-final aiResponseParserProvider = Provider<AiResponseParser>(
-  (_) => const AiResponseParser(),
-);
-
-final aiProviderAdapterProvider = Provider<AiProviderAdapter>((ref) {
-  final config = ref.watch(appConfigProvider);
-  if (!config.hasExternalAi) {
-    return const NullAiProviderAdapter();
-  }
-  return OpenAiCompatibleProviderAdapter(
-    dio: ref.watch(dioProvider),
-    config: config,
-  );
-});
-
-final aiFallbackServiceProvider = Provider<AiFallbackService>(
-  (ref) => AiFallbackService(
-    statusExplanationService: ref.watch(statusExplanationServiceProvider),
-    alertExplanationService: ref.watch(alertExplanationServiceProvider),
-  ),
-);
-
-final aiAssistantRepositoryProvider = Provider<AiAssistantRepository>(
-  (ref) => LocalAiAssistantRepository(
+final voiceContextPayloadBuilderProvider = Provider<VoiceContextPayloadBuilder>(
+  (ref) => VoiceContextPayloadBuilder(
     contextBuilder: ref.watch(aiContextBuilderProvider),
-    promptBuilder: ref.watch(aiPromptBuilderProvider),
-    providerAdapter: ref.watch(aiProviderAdapterProvider),
-    responseParser: ref.watch(aiResponseParserProvider),
-    fallbackService: ref.watch(aiFallbackServiceProvider),
-    logger: ref.watch(appLoggerProvider),
   ),
+);
+
+final voiceGatewayClientProvider = Provider<VoiceGatewayClient>(
+  (ref) => VoiceGatewayClient(
+    dio: Dio(),
+    config: ref.watch(appConfigProvider),
+  ),
+);
+
+final voiceCompanionRepositoryProvider = Provider<VoiceCompanionRepository>(
+  (ref) => GatewayVoiceCompanionRepository(
+    gatewayClient: ref.watch(voiceGatewayClientProvider),
+    contextPayloadBuilder: ref.watch(voiceContextPayloadBuilderProvider),
+  ),
+);
+
+final voiceRecordingServiceProvider =
+    Provider.autoDispose<VoiceRecordingService>(
+  (ref) {
+    final service = RecordVoiceRecordingService();
+    ref.onDispose(service.dispose);
+    return service;
+  },
+);
+
+final voicePlaybackServiceProvider = Provider.autoDispose<VoicePlaybackService>(
+  (ref) {
+    final service = JustAudioVoicePlaybackService();
+    ref.onDispose(service.dispose);
+    return service;
+  },
+);
+
+final voiceGatewayConfiguredProvider = Provider<bool>(
+  (ref) => ref.watch(voiceCompanionRepositoryProvider).isConfigured,
 );
 
 final routerProvider = Provider<GoRouter>(buildAppRouter);

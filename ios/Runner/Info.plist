@@ -43,6 +43,8 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location is used for safe-zone status and family coordination alerts.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Microphone access lets the senior speak to the companion assistant.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
