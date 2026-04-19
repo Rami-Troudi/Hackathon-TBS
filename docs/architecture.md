@@ -574,8 +574,10 @@ Senior experience expansion in G5:
 Settings exposes developer actions for fast demo iteration:
 
 - **Clear Session**: removes local session and returns to onboarding.
-- **Reseed Demo Data**: clears and re-seeds deterministic profile/link data.
-- **Reset Demo Data**: clears structured data and seed marker, then clears session.
+- **Reseed Demo Data**: clears structured and lightweight persisted demo state,
+  then re-seeds deterministic profiles/links.
+- **Reset Demo Data**: clears structured and lightweight persisted demo state,
+  including session, then returns to onboarding.
 
 ### When NOT to use StorageService
 

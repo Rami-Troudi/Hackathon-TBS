@@ -72,7 +72,8 @@ The Flutter app does not contain model-provider or Sawti credentials. It records
 senior audio and posts it to the configured gateway. The gateway owns STT, LLM
 reasoning, and TTS.
 
-Gateway mode is now opt-in. Local fallback runs by default for demo reliability.
+Gateway mode is opt-in and should be treated as experimental for demos.
+`local_fallback` is the default and recommended mode for final delivery.
 
 ```bash
 fvm flutter run \

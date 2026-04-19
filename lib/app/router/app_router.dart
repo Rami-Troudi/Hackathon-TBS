@@ -7,6 +7,7 @@ import 'package:senior_companion/features/companion/guardian_insights_screen.dar
 import 'package:senior_companion/features/companion/senior_companion_screen.dart';
 import 'package:senior_companion/features/onboarding/profile_selection_screen.dart';
 import 'package:senior_companion/features/onboarding/role_selection_screen.dart';
+import 'package:senior_companion/features/onboarding/setup_screen.dart';
 import 'package:senior_companion/features/guardian/guardian_alerts_screen.dart';
 import 'package:senior_companion/features/guardian/guardian_check_in_screen.dart';
 import 'package:senior_companion/features/guardian/guardian_home_screen.dart';
@@ -50,6 +51,19 @@ GoRouter buildAppRouter(Ref ref) {
           final role =
               AppRoleX.fromRaw(state.pathParameters['role'] ?? 'senior');
           return ProfileSelectionScreen(role: role);
+        },
+      ),
+      GoRoute(
+        path: '${AppRoutes.onboardingSetup}/:role/:profileId',
+        name: 'onboarding-setup',
+        builder: (_, state) {
+          final role =
+              AppRoleX.fromRaw(state.pathParameters['role'] ?? 'senior');
+          final profileId = state.pathParameters['profileId'] ?? '';
+          return OnboardingSetupScreen(
+            role: role,
+            profileId: profileId,
+          );
         },
       ),
       GoRoute(

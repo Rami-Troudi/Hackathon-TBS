@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
+import 'package:senior_companion/core/storage/storage_keys.dart';
 import 'package:senior_companion/features/onboarding/onboarding_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
@@ -94,9 +95,16 @@ class ProfileSelectionScreen extends ConsumerWidget {
       activeProfileId: profileId,
     );
     await preferencesRepository.setPreferredRole(role);
+    await ref
+        .read(storageServiceProvider)
+        .setBool('${StorageKeys.onboardingSetupDonePrefix}$profileId', false);
     if (!context.mounted) return;
     context.go(
-        role == AppRole.senior ? AppRoutes.seniorHome : AppRoutes.guardianHome);
+      AppRoutes.onboardingSetupFor(
+        role: role,
+        profileId: profileId,
+      ),
+    );
   }
 }
 

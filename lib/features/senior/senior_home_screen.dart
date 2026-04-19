@@ -8,22 +8,26 @@ import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
-import 'package:senior_companion/shared/models/hydration_state.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
-import 'package:senior_companion/shared/models/meal_state.dart';
-import 'package:senior_companion/shared/models/safe_zone_status.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 import 'package:senior_companion/shared/widgets/connectivity_banner.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-class SeniorHomeScreen extends ConsumerWidget {
+class SeniorHomeScreen extends ConsumerStatefulWidget {
   const SeniorHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final seniorHomeAsync = ref.watch(seniorHomeDataProvider);
+  ConsumerState<SeniorHomeScreen> createState() => _SeniorHomeScreenState();
+}
 
+class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
+  String? _lastPromptToken;
+
+  @override
+  Widget build(BuildContext context) {
+    final seniorHomeAsync = ref.watch(seniorHomeDataProvider);
     return AppScaffoldShell(
       title: 'Today',
       role: AppShellRole.senior,
@@ -38,7 +42,133 @@ class SeniorHomeScreen extends ConsumerWidget {
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
             Center(child: Text('Could not load senior home: $error')),
-        data: (data) => _SeniorHomeContent(data: data),
+        data: (data) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showUrgentPromptIfNeeded(context, data);
+          });
+          return _SeniorHomeContent(data: data);
+        },
+      ),
+    );
+  }
+
+  Future<void> _showUrgentPromptIfNeeded(
+    BuildContext context,
+    SeniorHomeData data,
+  ) async {
+    if (!mounted || data.activeSeniorId == null) return;
+    final reminder = data.nextReminder;
+    final promptToken =
+        '${data.checkInState.status.name}-${reminder?.plan.id}-${reminder?.status.name}';
+    if (_lastPromptToken == promptToken) return;
+
+    if (data.checkInState.status != CheckInStatus.completed) {
+      _lastPromptToken = promptToken;
+      final yes = await _showSeniorPrompt(
+        context,
+        title: 'Are you okay?',
+        body: 'Please confirm your daily check-in now.',
+        yesLabel: 'Yes',
+        noLabel: 'No',
+      );
+      if (!mounted) return;
+      if (yes == true) {
+        await ref
+            .read(checkInRepositoryProvider)
+            .markCheckInCompleted(data.activeSeniorId!);
+      } else if (yes == false) {
+        await ref
+            .read(checkInRepositoryProvider)
+            .markNeedHelp(data.activeSeniorId!);
+      }
+      ref.invalidate(seniorHomeDataProvider);
+      return;
+    }
+
+    if (reminder != null &&
+        reminder.status == MedicationReminderStatus.pending) {
+      _lastPromptToken = promptToken;
+      final yes = await _showSeniorPrompt(
+        context,
+        title: 'Medication reminder',
+        body:
+            'Did you take ${reminder.plan.medicationName} (${reminder.slotLabel})?',
+        yesLabel: 'Taken',
+        noLabel: 'Not yet',
+      );
+      if (!mounted) return;
+      if (yes == true) {
+        await ref.read(medicationRepositoryProvider).markMedicationTaken(
+              data.activeSeniorId!,
+              planId: reminder.plan.id,
+            );
+      } else if (yes == false) {
+        await ref.read(medicationRepositoryProvider).markMedicationMissed(
+              data.activeSeniorId!,
+              planId: reminder.plan.id,
+            );
+      }
+      ref.invalidate(seniorHomeDataProvider);
+    }
+  }
+
+  Future<bool?> _showSeniorPrompt(
+    BuildContext context, {
+    required String title,
+    required String body,
+    required String yesLabel,
+    required String noLabel,
+  }) {
+    return showGeneralDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Senior prompt',
+      transitionDuration: const Duration(milliseconds: 180),
+      pageBuilder: (_, __, ___) => Scaffold(
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Spacer(),
+                Icon(
+                  Icons.notifications_active_outlined,
+                  size: 84,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineLarge,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  body,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const Spacer(),
+                SizedBox(
+                  height: 62,
+                  child: FilledButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: Text(yesLabel),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                SizedBox(
+                  height: 62,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: Text(noLabel),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -64,128 +194,113 @@ class _SeniorHomeContent extends ConsumerWidget {
 
     final settings = data.settings;
     final profileName = data.profile?.displayName ?? 'there';
-    final greetingStyle = settings.largeTextEnabled
-        ? Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 30)
-        : Theme.of(context).textTheme.headlineSmall;
-    final greeting = _localizedGreeting(
-      settings.languageCode,
-      profileName: profileName,
-    );
-    final supportLine = settings.simplifiedModeEnabled
-        ? _localizedSimpleSupportLine(settings.languageCode)
-        : _localizedSupportLine(
-            settings.languageCode,
-            emergencyContactLabel: settings.emergencyContactLabel,
-          );
+    final greeting = switch (settings.languageCode) {
+      'ar' => 'Marhaban, $profileName',
+      'en' => 'Hello, $profileName',
+      _ => 'Bonjour, $profileName',
+    };
     final connectivityState =
         ref.watch(connectivityStateProvider).valueOrNull ??
             AppConnectivityState.online;
 
     return ListView(
       children: [
-        Text(greeting, style: greetingStyle),
-        Gaps.v4,
+        Text(greeting, style: Theme.of(context).textTheme.headlineSmall),
+        const SizedBox(height: AppSpacing.xs),
         Text(
-          supportLine,
+          'Quick actions below keep your family informed.',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         if (connectivityState != AppConnectivityState.online) ...[
-          Gaps.v16,
+          const SizedBox(height: AppSpacing.md),
           ConnectivityBanner(state: connectivityState),
         ],
-        Gaps.v16,
+        const SizedBox(height: AppSpacing.md),
         _StatusCard(summary: data.summary),
-        Gaps.v16,
+        const SizedBox(height: AppSpacing.md),
         _PrimaryActionCard(
           checkInState: data.checkInState,
-          onPrimaryAction: () => _completeCheckIn(context, ref, seniorId),
-          onHelpAction: () => _needHelp(context, ref, seniorId),
+          onPrimaryAction: () async {
+            final created = await ref
+                .read(checkInRepositoryProvider)
+                .markCheckInCompleted(seniorId);
+            ref.invalidate(seniorHomeDataProvider);
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content:
+                    Text(created ? 'Check-in completed' : 'Already completed'),
+              ),
+            );
+          },
+          onHelpAction: () async {
+            await ref.read(checkInRepositoryProvider).markNeedHelp(seniorId);
+            ref.invalidate(seniorHomeDataProvider);
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Help request sent')),
+            );
+          },
+          onEmergencyCall: () => _launchEmergencyDialer(context),
           onCompanion: () => context.push(AppRoutes.seniorCompanion),
         ),
-        Gaps.v16,
-        _TodayRoutineCard(
-          checkInState: data.checkInState,
-          nextReminder: data.nextReminder,
-          hydrationState: data.hydrationState,
-          nutritionState: data.nutritionState,
-          safeZoneStatus: data.safeZoneStatus,
-          simplifiedModeEnabled: settings.simplifiedModeEnabled,
-          onMedication: () => context.push(AppRoutes.medication),
-          onHydration: () => context.push(AppRoutes.seniorHydration),
-          onNutrition: () => context.push(AppRoutes.seniorNutrition),
-          onSummary: () => context.push(AppRoutes.seniorSummary),
+        const SizedBox(height: AppSpacing.md),
+        _MedicationQuickCard(
+          reminder: data.nextReminder,
+          onTaken: data.nextReminder == null
+              ? null
+              : () async {
+                  await ref
+                      .read(medicationRepositoryProvider)
+                      .markMedicationTaken(
+                        seniorId,
+                        planId: data.nextReminder!.plan.id,
+                      );
+                  ref.invalidate(seniorHomeDataProvider);
+                },
+          onMissed: data.nextReminder == null
+              ? null
+              : () async {
+                  await ref
+                      .read(medicationRepositoryProvider)
+                      .markMedicationMissed(
+                        seniorId,
+                        planId: data.nextReminder!.plan.id,
+                      );
+                  ref.invalidate(seniorHomeDataProvider);
+                },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            FilledButton.tonal(
+              onPressed: () => context.push(AppRoutes.seniorHydration),
+              child: const Text('Hydration'),
+            ),
+            FilledButton.tonal(
+              onPressed: () => context.push(AppRoutes.seniorNutrition),
+              child: const Text('Meals'),
+            ),
+            FilledButton.tonal(
+              onPressed: () => context.push(AppRoutes.seniorSummary),
+              child: const Text('Daily summary'),
+            ),
+          ],
         ),
       ],
     );
   }
 
-  String _localizedGreeting(
-    String languageCode, {
-    required String profileName,
-  }) {
-    return switch (languageCode) {
-      'ar' => 'Marhaban, $profileName',
-      'en' => 'Hello, $profileName',
-      _ => 'Bonjour, $profileName',
-    };
-  }
-
-  String _localizedSupportLine(
-    String languageCode, {
-    required String emergencyContactLabel,
-  }) {
-    return switch (languageCode) {
-      'ar' =>
-        'Your support actions are below. In an emergency, contact $emergencyContactLabel.',
-      'en' =>
-        'Your support actions are below. In an emergency, contact $emergencyContactLabel.',
-      _ =>
-        'Vos actions essentielles sont ci-dessous. En cas d’urgence, contactez $emergencyContactLabel.',
-    };
-  }
-
-  String _localizedSimpleSupportLine(String languageCode) {
-    return switch (languageCode) {
-      'ar' => 'Use the two large buttons below to check in or ask for help.',
-      'en' => 'Use the two large buttons below to check in or ask for help.',
-      _ =>
-        'Utilisez les deux grands boutons ci-dessous pour confirmer ou demander de l’aide.',
-    };
-  }
-
-  Future<void> _completeCheckIn(
-    BuildContext context,
-    WidgetRef ref,
-    String seniorId,
-  ) async {
-    final created = await ref
-        .read(checkInRepositoryProvider)
-        .markCheckInCompleted(seniorId);
-    ref.invalidate(seniorHomeDataProvider);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          created
-              ? 'Check-in completed'
-              : 'Today\'s check-in was already completed',
-        ),
-      ),
-    );
-  }
-
-  Future<void> _needHelp(
-    BuildContext context,
-    WidgetRef ref,
-    String seniorId,
-  ) async {
-    await ref.read(checkInRepositoryProvider).markNeedHelp(seniorId);
-    ref.invalidate(seniorHomeDataProvider);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-          content: Text('Help request recorded. Support has been alerted.')),
-    );
+  Future<void> _launchEmergencyDialer(BuildContext context) async {
+    final uri = Uri.parse('tel:112');
+    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open emergency dialer')),
+      );
+    }
   }
 }
 
@@ -203,7 +318,7 @@ class _StatusCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           StatusPill(status: summary.globalStatus),
-          Gaps.v12,
+          const SizedBox(height: AppSpacing.sm),
           Text(
             summary.globalStatus.description,
             style: Theme.of(context).textTheme.bodyLarge,
@@ -219,12 +334,14 @@ class _PrimaryActionCard extends StatelessWidget {
     required this.checkInState,
     required this.onPrimaryAction,
     required this.onHelpAction,
+    required this.onEmergencyCall,
     required this.onCompanion,
   });
 
   final CheckInState checkInState;
   final VoidCallback onPrimaryAction;
   final VoidCallback onHelpAction;
+  final VoidCallback onEmergencyCall;
   final VoidCallback onCompanion;
 
   @override
@@ -242,14 +359,14 @@ class _PrimaryActionCard extends StatelessWidget {
           subtitle,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        Gaps.v12,
+        const SizedBox(height: AppSpacing.sm),
         BigAction(
           label: 'I\'m okay',
           subtitle: 'Send today\'s check-in',
           icon: Icons.favorite_outline,
           onTap: onPrimaryAction,
         ),
-        Gaps.v8,
+        const SizedBox(height: AppSpacing.sm),
         BigAction(
           label: 'I need help',
           subtitle: 'Alert your family now',
@@ -257,7 +374,15 @@ class _PrimaryActionCard extends StatelessWidget {
           tone: BigActionTone.destructive,
           onTap: onHelpAction,
         ),
-        Gaps.v8,
+        const SizedBox(height: AppSpacing.sm),
+        BigAction(
+          label: 'Emergency call',
+          subtitle: 'Open 112 dialer now',
+          icon: Icons.local_phone_outlined,
+          tone: BigActionTone.destructive,
+          onTap: onEmergencyCall,
+        ),
+        const SizedBox(height: AppSpacing.sm),
         BigAction(
           label: 'Talk to Companion',
           subtitle: 'Ask by voice',
@@ -270,127 +395,56 @@ class _PrimaryActionCard extends StatelessWidget {
   }
 }
 
-class _TodayRoutineCard extends StatelessWidget {
-  const _TodayRoutineCard({
-    required this.checkInState,
-    required this.nextReminder,
-    required this.hydrationState,
-    required this.nutritionState,
-    required this.safeZoneStatus,
-    required this.simplifiedModeEnabled,
-    required this.onMedication,
-    required this.onHydration,
-    required this.onNutrition,
-    required this.onSummary,
+class _MedicationQuickCard extends StatelessWidget {
+  const _MedicationQuickCard({
+    required this.reminder,
+    required this.onTaken,
+    required this.onMissed,
   });
 
-  final CheckInState checkInState;
-  final MedicationReminder? nextReminder;
-  final HydrationState hydrationState;
-  final NutritionState nutritionState;
-  final SafeZoneStatus safeZoneStatus;
-  final bool simplifiedModeEnabled;
-  final VoidCallback onMedication;
-  final VoidCallback onHydration;
-  final VoidCallback onNutrition;
-  final VoidCallback onSummary;
+  final MedicationReminder? reminder;
+  final VoidCallback? onTaken;
+  final VoidCallback? onMissed;
 
   @override
   Widget build(BuildContext context) {
-    final checkInLabel = switch (checkInState.status) {
-      CheckInStatus.completed => 'Done',
-      CheckInStatus.pending => 'Pending',
-      CheckInStatus.missed => 'Pending',
-    };
-
     return AppCard(
       tone: AppCardTone.sage,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Today routine',
+            'Medication',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          Gaps.v8,
-          Text('Check-in: $checkInLabel'),
+          const SizedBox(height: AppSpacing.sm),
           Text(
-            nextReminder == null
-                ? 'Medication: No pending reminder'
-                : 'Medication: ${nextReminder!.plan.medicationName} at ${nextReminder!.slotLabel}',
+            reminder == null
+                ? 'Next medication: no pending reminder.'
+                : 'Next medication: ${reminder!.plan.medicationName} at ${reminder!.slotLabel}.',
           ),
-          if (!simplifiedModeEnabled) ...[
-            Text(
-              'Hydration: ${hydrationState.completedCount}/${hydrationState.dailyGoalCompletions}',
-            ),
-            Text(
-              'Meals: ${nutritionState.completedCount}/${nutritionState.slots.length}',
-            ),
-            Text('Safe status: ${safeZoneStatus.zoneLabel}'),
-          ],
-          Gaps.v12,
-          Wrap(
-            spacing: AppSpacing.sm,
-            runSpacing: AppSpacing.sm,
-            children: [
-              FilledButton.tonal(
-                onPressed: onMedication,
-                child: const Text('Medication'),
-              ),
-              if (!simplifiedModeEnabled)
-                OutlinedButton.icon(
-                  onPressed: () => _showMoreActions(context),
-                  icon: const Icon(Icons.more_horiz),
-                  label: const Text('More options'),
+          if (reminder != null &&
+              reminder!.status == MedicationReminderStatus.pending) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton(
+                    onPressed: onTaken,
+                    child: const Text('Taken'),
+                  ),
                 ),
-            ],
-          ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: onMissed,
+                    child: const Text('Not yet'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
-      ),
-    );
-  }
-
-  Future<void> _showMoreActions(BuildContext context) {
-    return showModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Additional actions',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              Gaps.v12,
-              FilledButton.tonal(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onHydration();
-                },
-                child: const Text('Hydration'),
-              ),
-              Gaps.v8,
-              FilledButton.tonal(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onNutrition();
-                },
-                child: const Text('Meals'),
-              ),
-              Gaps.v8,
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                  onSummary();
-                },
-                child: const Text('Daily summary'),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

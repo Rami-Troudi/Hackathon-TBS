@@ -29,7 +29,8 @@ Use this checklist before handing off the final prototype or recording a demo.
 - [ ] Hydration complete/missed state updates.
 - [ ] Nutrition complete/missed state updates.
 - [ ] Senior summary reflects real local events.
-- [ ] Senior Companion requests microphone permission and can send audio to the configured gateway.
+- [ ] Senior Companion requests microphone permission and completes voice interaction in `local_fallback` mode.
+- [ ] If gateway mode is enabled, the app handles gateway failure without crashing.
 
 ## Guardian Flows
 
@@ -39,7 +40,7 @@ Use this checklist before handing off the final prototype or recording a demo.
 - [ ] Timeline shows persisted events and filters correctly.
 - [ ] Check-in, medication, incident, hydration, nutrition, location, profile,
   summary, and insights entry points are reachable.
-- [ ] Guardian Insights clearly links to deterministic alerts, timeline, and summaries without AI chat controls.
+- [ ] Guardian Insights conversational responses stay grounded in local alerts, timeline, summaries, and status.
 
 ## Safe-Zone Prototype
 
@@ -68,8 +69,8 @@ Use this checklist before handing off the final prototype or recording a demo.
 ## Reset and Demo Controls
 
 - [ ] Switch role for testing works from Settings.
-- [ ] Reseed demo data recreates deterministic profiles and links.
-- [ ] Reset demo data clears session and returns to onboarding.
+- [ ] Reseed demo data clears stale persisted state and recreates deterministic profiles/links.
+- [ ] Reset demo data clears all persisted state and returns to onboarding.
 - [ ] Developer Hub remains reachable for diagnostic event generation.
 
 ## Route Sanity
@@ -108,6 +109,8 @@ Use this checklist before handing off the final prototype or recording a demo.
 - [ ] Local flows remain usable because persisted local state is source of
   truth.
 - [ ] External AI failure or missing provider falls back deterministically.
+- [ ] `local_fallback` mode is the default and recommended demo mode.
+- [ ] External `gateway` mode is treated as optional/experimental in docs and demo script.
 
 ## Product Language
 

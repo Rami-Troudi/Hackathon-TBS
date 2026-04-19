@@ -7,4 +7,6 @@ abstract class PreferencesRepository {
   Future<int> incrementLaunchCount();
   Future<bool> isNotificationsEnabled();
   Future<void> setNotificationsEnabled(bool enabled);
+  Future<String> getAppLanguageCode();
+  Future<void> setAppLanguageCode(String languageCode);
 }

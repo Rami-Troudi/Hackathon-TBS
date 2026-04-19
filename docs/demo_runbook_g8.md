@@ -11,10 +11,10 @@ fvm flutter analyze
 fvm flutter test
 ```
 
-The senior voice companion uses the configured voice gateway. The current demo
-gateway is the default value in the app config.
+Final demo policy: run senior voice companion in `local_fallback` mode.
+Gateway mode is optional and experimental.
 
-Explicit voice gateway run:
+Optional gateway run (experimental):
 
 ```bash
 fvm flutter run \
@@ -68,9 +68,9 @@ Settings screen.
 
 From **Settings**:
 - **Clear session** returns to onboarding without reseeding.
-- **Reseed demo data** recreates deterministic profiles and links.
-- **Reset demo data** clears structured demo data and session, then returns to
-  onboarding.
+- **Reseed demo data** clears persisted demo state and recreates deterministic
+  profiles/links.
+- **Reset demo data** clears all persisted demo state and returns to onboarding.
 
 Recommended before a clean demo:
 
@@ -129,7 +129,7 @@ Fast scenario setup:
 If the voice gateway is unavailable during a live demo:
 - Show the senior companion screen and explain the endpoint requirement.
 - Continue the demo through deterministic local summaries, alerts, and timeline.
-- Do not claim offline AI behavior; the app no longer ships a local AI fallback.
+- Keep `local_fallback` mode active for stable demo behavior.
 - The app should never invent events or make medical claims.
 
 ## 8. Known Prototype Limits During Demo

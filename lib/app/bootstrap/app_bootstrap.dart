@@ -36,6 +36,7 @@ class AppBootstrap {
     final demoSeedRepository = LocalDemoSeedRepository(
       profileRepository: profileRepository,
       storage: storageService,
+      hiveInitializer: hiveInitializer,
     );
     final permissionService =
         PermissionHandlerPermissionService(logger: logger);
@@ -53,6 +54,7 @@ class AppBootstrap {
       hiveInitializer: hiveInitializer,
       demoSeedRepository: demoSeedRepository,
       notificationService: notificationService,
+      permissionService: permissionService,
     );
 
     await initializer.initialize();

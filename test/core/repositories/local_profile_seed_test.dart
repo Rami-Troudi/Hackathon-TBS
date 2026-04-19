@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:senior_companion/core/repositories/local/local_demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_profile_repository.dart';
+import 'package:senior_companion/core/storage/hive_box_names.dart';
 import 'package:senior_companion/core/storage/hive_initializer.dart';
+import 'package:senior_companion/core/storage/storage_keys.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
 
 class _InMemoryStorageService implements StorageService {
@@ -79,6 +81,7 @@ void main() {
     final seedRepository = LocalDemoSeedRepository(
       profileRepository: profileRepository,
       storage: _InMemoryStorageService(),
+      hiveInitializer: hiveInitializer,
     );
 
     await seedRepository.seedIfNeeded();
@@ -110,16 +113,87 @@ void main() {
     await hiveInitializer.initialize();
     final profileRepository =
         LocalProfileRepository(hiveInitializer: hiveInitializer);
+    final storage = _InMemoryStorageService();
+    await storage.setString(StorageKeys.appSession, 'stale-session');
+    await storage.setString(StorageKeys.guardianAlertStates, '{"a":"active"}');
+    await storage.setString(
+      '${StorageKeys.seniorSettingsPrefix}senior-alice',
+      '{}',
+    );
+    await storage.setString(
+      '${StorageKeys.guardianSettingsPrefix}guardian-nour',
+      '{}',
+    );
     final seedRepository = LocalDemoSeedRepository(
       profileRepository: profileRepository,
-      storage: _InMemoryStorageService(),
+      storage: storage,
+      hiveInitializer: hiveInitializer,
     );
 
     await seedRepository.reseedDemoData();
+    await hiveInitializer
+        .box(HiveBoxNames.eventRecords)
+        .put('event-1', {'id': 'event-1'});
+    await hiveInitializer
+        .box(HiveBoxNames.safeZoneState)
+        .put('state-1', {'id': 'state-1'});
     await seedRepository.resetDemoData();
 
     expect(await profileRepository.getSeniorProfiles(), isEmpty);
     expect(await profileRepository.getGuardianProfiles(), isEmpty);
+    expect(hiveInitializer.box(HiveBoxNames.eventRecords).isEmpty, isTrue);
+    expect(hiveInitializer.box(HiveBoxNames.safeZoneState).isEmpty, isTrue);
+    expect(storage.getString(StorageKeys.appSession), isNull);
+    expect(storage.getString(StorageKeys.guardianAlertStates), isNull);
+    expect(
+      storage.getString('${StorageKeys.seniorSettingsPrefix}senior-alice'),
+      isNull,
+    );
+    expect(
+      storage.getString('${StorageKeys.guardianSettingsPrefix}guardian-nour'),
+      isNull,
+    );
+
+    await Hive.close();
+    await tempDir.delete(recursive: true);
+  });
+
+  test('reseed demo data clears stale structured records before reseeding',
+      () async {
+    final tempDir = await Directory.systemTemp
+        .createTemp('senior-companion-profile-reseed');
+    final storage = _InMemoryStorageService();
+    final hiveInitializer = HiveInitializer(
+      hive: Hive,
+      initFunction: () async {
+        Hive.init(tempDir.path);
+      },
+    );
+    await hiveInitializer.initialize();
+    final profileRepository =
+        LocalProfileRepository(hiveInitializer: hiveInitializer);
+    final seedRepository = LocalDemoSeedRepository(
+      profileRepository: profileRepository,
+      storage: storage,
+      hiveInitializer: hiveInitializer,
+    );
+
+    await seedRepository.reseedDemoData();
+    await hiveInitializer
+        .box(HiveBoxNames.eventRecords)
+        .put('stale-event', {'id': 'stale-event'});
+    await hiveInitializer
+        .box(HiveBoxNames.safeZoneState)
+        .put('stale-zone', {'id': 'stale-zone'});
+    await storage.setString(StorageKeys.guardianAlertStates, '{"x":"active"}');
+
+    await seedRepository.reseedDemoData();
+
+    expect(hiveInitializer.box(HiveBoxNames.eventRecords).isEmpty, isTrue);
+    expect(hiveInitializer.box(HiveBoxNames.safeZoneState).isEmpty, isTrue);
+    expect(storage.getString(StorageKeys.guardianAlertStates), isNull);
+    expect(await profileRepository.getSeniorProfiles(), hasLength(2));
+    expect(await profileRepository.getGuardianProfiles(), hasLength(2));
 
     await Hive.close();
     await tempDir.delete(recursive: true);

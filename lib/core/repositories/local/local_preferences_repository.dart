@@ -44,4 +44,14 @@ class LocalPreferencesRepository implements PreferencesRepository {
   Future<void> setNotificationsEnabled(bool enabled) async {
     await storage.setBool(StorageKeys.notificationsEnabled, enabled);
   }
+
+  @override
+  Future<String> getAppLanguageCode() async {
+    return storage.getString(StorageKeys.appLanguageCode) ?? 'fr';
+  }
+
+  @override
+  Future<void> setAppLanguageCode(String languageCode) async {
+    await storage.setString(StorageKeys.appLanguageCode, languageCode);
+  }
 }

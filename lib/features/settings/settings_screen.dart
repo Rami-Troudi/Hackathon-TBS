@@ -74,9 +74,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Future<void> _saveSenior(SeniorSettingsPreferences settings) async {
     final session = _activeSession;
     if (session == null || session.activeRole != AppRole.senior) return;
+    final settingsRepository = ref.read(settingsRepositoryProvider);
+    await settingsRepository.saveSeniorSettings(
+        session.activeProfileId, settings);
     await ref
-        .read(settingsRepositoryProvider)
-        .saveSeniorSettings(session.activeProfileId, settings);
+        .read(preferencesRepositoryProvider)
+        .setAppLanguageCode(settings.languageCode);
+    ref.read(appPresentationSettingsRevisionProvider.notifier).state++;
     if (!mounted) return;
     setState(() => _seniorSettings = settings);
   }
@@ -87,6 +91,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await ref
         .read(settingsRepositoryProvider)
         .saveGuardianSettings(session.activeProfileId, settings);
+    ref.read(appPresentationSettingsRevisionProvider.notifier).state++;
     if (!mounted) return;
     setState(() => _guardianSettings = settings);
   }

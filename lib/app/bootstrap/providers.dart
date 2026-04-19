@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_router.dart';
@@ -39,6 +40,7 @@ import 'package:senior_companion/core/repositories/local/local_profile_repositor
 import 'package:senior_companion/core/repositories/local/local_safe_zone_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_settings_repository.dart';
 import 'package:senior_companion/core/repositories/local/local_summary_repository.dart';
+import 'package:senior_companion/core/runtime/fall_detection_service.dart';
 import 'package:senior_companion/core/repositories/medication_repository.dart';
 import 'package:senior_companion/core/repositories/nutrition_repository.dart';
 import 'package:senior_companion/core/repositories/preferences_repository.dart';
@@ -164,6 +166,7 @@ final demoSeedRepositoryProvider = Provider<DemoSeedRepository>(
   (ref) => LocalDemoSeedRepository(
     profileRepository: ref.watch(profileRepositoryProvider),
     storage: ref.watch(storageServiceProvider),
+    hiveInitializer: ref.watch(hiveInitializerProvider),
   ),
 );
 
@@ -330,5 +333,64 @@ final voicePlaybackServiceProvider = Provider<VoicePlaybackService>(
 final voiceGatewayConfiguredProvider = Provider<bool>(
   (ref) => ref.watch(voiceCompanionRepositoryProvider).isConfigured,
 );
+
+final fallDetectionServiceProvider = Provider<FallDetectionService>(
+  (ref) {
+    final service = FallDetectionService(
+      logger: ref.watch(appLoggerProvider),
+      activeSeniorResolver: ref.watch(activeSeniorResolverProvider),
+      incidentRepository: ref.watch(incidentRepositoryProvider),
+    );
+    ref.onDispose(service.dispose);
+    return service;
+  },
+);
+
+final appPresentationSettingsRevisionProvider = StateProvider<int>((_) => 0);
+
+class AppPresentationSettings {
+  const AppPresentationSettings({
+    required this.locale,
+    required this.textScale,
+    required this.highContrast,
+  });
+
+  final Locale locale;
+  final double textScale;
+  final bool highContrast;
+}
+
+final appPresentationSettingsProvider =
+    FutureProvider<AppPresentationSettings>((ref) async {
+  ref.watch(appPresentationSettingsRevisionProvider);
+  final session = await ref.watch(appSessionRepositoryProvider).getSession();
+  final preferencesRepository = ref.watch(preferencesRepositoryProvider);
+  final settingsRepository = ref.watch(settingsRepositoryProvider);
+
+  final globalLanguage = await preferencesRepository.getAppLanguageCode();
+  if (session == null) {
+    return AppPresentationSettings(
+      locale: Locale(globalLanguage),
+      textScale: 1.0,
+      highContrast: false,
+    );
+  }
+
+  if (session.activeRole == AppRole.senior) {
+    final settings =
+        await settingsRepository.getSeniorSettings(session.activeProfileId);
+    return AppPresentationSettings(
+      locale: Locale(settings.languageCode),
+      textScale: settings.largeTextEnabled ? 1.14 : 1.0,
+      highContrast: settings.highContrastEnabled,
+    );
+  }
+
+  return AppPresentationSettings(
+    locale: Locale(globalLanguage),
+    textScale: 1.0,
+    highContrast: false,
+  );
+});
 
 final routerProvider = Provider<GoRouter>(buildAppRouter);

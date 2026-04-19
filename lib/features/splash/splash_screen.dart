@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
+import 'package:senior_companion/core/storage/storage_keys.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 
@@ -77,10 +78,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
         await sessionRepo.clearSession();
         destination = AppRoutes.onboardingRole;
       } else {
-        destination = switch (session.activeRole) {
-          AppRole.senior => AppRoutes.seniorHome,
-          AppRole.guardian => AppRoutes.guardianHome,
-        };
+        final setupDone = ref
+                .read(storageServiceProvider)
+                .getBool(
+                    '${StorageKeys.onboardingSetupDonePrefix}${session.activeProfileId}') ??
+            false;
+        destination = setupDone
+            ? switch (session.activeRole) {
+                AppRole.senior => AppRoutes.seniorHome,
+                AppRole.guardian => AppRoutes.guardianHome,
+              }
+            : AppRoutes.onboardingSetupFor(
+                role: session.activeRole,
+                profileId: session.activeProfileId,
+              );
       }
     }
 

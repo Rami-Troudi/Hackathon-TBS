@@ -1,5 +1,6 @@
 import 'package:senior_companion/core/repositories/demo_seed_repository.dart';
 import 'package:senior_companion/core/repositories/profile_repository.dart';
+import 'package:senior_companion/core/storage/hive_initializer.dart';
 import 'package:senior_companion/core/storage/storage_keys.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
 import 'package:senior_companion/shared/models/guardian_profile.dart';
@@ -12,10 +13,12 @@ class LocalDemoSeedRepository implements DemoSeedRepository {
   const LocalDemoSeedRepository({
     required this.profileRepository,
     required this.storage,
+    required this.hiveInitializer,
   });
 
   final ProfileRepository profileRepository;
   final StorageService storage;
+  final HiveInitializer hiveInitializer;
 
   @override
   Future<void> seedIfNeeded() async {
@@ -31,6 +34,8 @@ class LocalDemoSeedRepository implements DemoSeedRepository {
 
   @override
   Future<void> reseedDemoData() async {
+    await hiveInitializer.clearStructuredBoxes();
+    await _clearSharedState();
     await profileRepository.clearAllProfiles();
     await profileRepository.saveSeniorProfiles(_seedSeniors);
     await profileRepository.saveGuardianProfiles(_seedGuardians);
@@ -40,8 +45,39 @@ class LocalDemoSeedRepository implements DemoSeedRepository {
 
   @override
   Future<void> resetDemoData() async {
+    await hiveInitializer.clearStructuredBoxes();
+    await _clearSharedState();
     await profileRepository.clearAllProfiles();
-    await storage.remove(StorageKeys.demoSeedVersion);
+  }
+
+  Future<void> _clearSharedState() async {
+    final seniorIds = {
+      ...(await profileRepository.getSeniorProfiles())
+          .map((profile) => profile.id),
+      ..._seedSeniors.map((profile) => profile.id),
+    };
+    final guardianIds = {
+      ...(await profileRepository.getGuardianProfiles())
+          .map((profile) => profile.id),
+      ..._seedGuardians.map((profile) => profile.id),
+    };
+
+    final removals = <Future<bool>>[
+      storage.remove(StorageKeys.demoSeedVersion),
+      storage.remove(StorageKeys.appSession),
+      storage.remove(StorageKeys.preferredRole),
+      storage.remove(StorageKeys.launchCount),
+      storage.remove(StorageKeys.notificationsEnabled),
+      storage.remove(StorageKeys.guardianAlertStates),
+      storage.remove(StorageKeys.connectivityState),
+      ...seniorIds.map(
+        (id) => storage.remove('${StorageKeys.seniorSettingsPrefix}$id'),
+      ),
+      ...guardianIds.map(
+        (id) => storage.remove('${StorageKeys.guardianSettingsPrefix}$id'),
+      ),
+    ];
+    await Future.wait(removals);
   }
 }
 

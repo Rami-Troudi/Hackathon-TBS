@@ -4,6 +4,7 @@ class AppRoutes {
   static const splash = '/splash';
   static const onboardingRole = '/onboarding/role';
   static const onboardingProfile = '/onboarding/profile';
+  static const onboardingSetup = '/onboarding/setup';
   static const home = '/home';
   static const seniorHome = '/senior';
   static const checkIn = '/senior/check-in';
@@ -29,5 +30,12 @@ class AppRoutes {
 
   static String onboardingProfileForRole(AppRole role) {
     return '$onboardingProfile/${role.value}';
+  }
+
+  static String onboardingSetupFor({
+    required AppRole role,
+    required String profileId,
+  }) {
+    return '$onboardingSetup/${role.value}/$profileId';
   }
 }

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
@@ -32,6 +35,10 @@ class GuardianLocationScreen extends ConsumerWidget {
           final status = data.status;
           final location = status.location;
           final zoneLabel = status.zoneLabel;
+          final mapCenter = LatLng(
+            location?.latitude ?? 36.8065,
+            location?.longitude ?? 10.1815,
+          );
           return ListView(
             children: [
               Row(
@@ -48,6 +55,63 @@ class GuardianLocationScreen extends ConsumerWidget {
                     label: const Text('Add zone'),
                   ),
                 ],
+              ),
+              Gaps.v8,
+              SizedBox(
+                height: 280,
+                child: Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: FlutterMap(
+                    options: MapOptions(
+                      initialCenter: mapCenter,
+                      initialZoom: 14,
+                      interactionOptions: const InteractionOptions(
+                        flags: InteractiveFlag.drag |
+                            InteractiveFlag.pinchZoom |
+                            InteractiveFlag.doubleTapZoom,
+                      ),
+                    ),
+                    children: [
+                      TileLayer(
+                        urlTemplate:
+                            'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                        userAgentPackageName: 'com.example.senior_companion',
+                      ),
+                      CircleLayer(
+                        circles: data.zones
+                            .map(
+                              (zone) => CircleMarker(
+                                point: LatLng(
+                                  zone.centerLatitude,
+                                  zone.centerLongitude,
+                                ),
+                                radius: zone.radiusMeters,
+                                useRadiusInMeter: true,
+                                borderColor: Colors.green.shade700,
+                                borderStrokeWidth: 2,
+                                color: Colors.green.withOpacity(0.22),
+                              ),
+                            )
+                            .toList(growable: false),
+                      ),
+                      MarkerLayer(
+                        markers: [
+                          if (location != null)
+                            Marker(
+                              point: mapCenter,
+                              width: 42,
+                              height: 42,
+                              child: const Icon(
+                                Icons.location_on,
+                                color: Colors.red,
+                                size: 36,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
               Gaps.v8,
               Card(
@@ -103,6 +167,16 @@ class GuardianLocationScreen extends ConsumerWidget {
                   ),
                 ),
               Gaps.v8,
+              FilledButton.icon(
+                onPressed: () => _useCurrentDeviceLocation(
+                  context,
+                  ref,
+                  seniorId,
+                ),
+                icon: const Icon(Icons.gps_fixed),
+                label: const Text('Use current device location'),
+              ),
+              Gaps.v8,
               OutlinedButton.icon(
                 onPressed: () => _simulateOutside(ref, seniorId, data.zones),
                 icon: const Icon(Icons.my_location),
@@ -136,6 +210,42 @@ class GuardianLocationScreen extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  Future<void> _useCurrentDeviceLocation(
+    BuildContext context,
+    WidgetRef ref,
+    String seniorId,
+  ) async {
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Location service is disabled')),
+        );
+        return;
+      }
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+      await ref.read(safeZoneRepositoryProvider).updateSimulatedLocation(
+            seniorId,
+            latitude: position.latitude,
+            longitude: position.longitude,
+            label: 'Live device location',
+          );
+      ref.invalidate(guardianLocationDataProvider);
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not read current location'),
+        ),
+      );
+    }
   }
 
   Future<void> _simulateMoveToZone(

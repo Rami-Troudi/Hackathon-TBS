@@ -10,7 +10,7 @@ A runnable local-first Flutter mobile app for daily senior support and family co
 - **Medication reminders** with taken/skip tracking
 - **Incident & emergency** handling with escalation
 - **Hydration & nutrition** tracking with reminders
-- **Voice companion** — microphone-first conversational support (with fallback text mode)
+- **Voice companion** — microphone-first support using local fallback mode by default
 - **Daily summary** — personalized daily overview
 - **Settings** — accessibility, notifications, language, emergency contact
 
@@ -23,7 +23,7 @@ A runnable local-first Flutter mobile app for daily senior support and family co
 - **Incident monitoring** — history and escalation tracking
 - **Hydration & nutrition monitoring** — completion snapshots and trends
 - **Safe-zone/location** — prototype location monitoring with simulated updates
-- **Daily summary & insights** — local assistant Q&A grounded in real data
+- **Daily summary & insights** — local assistant Q&A grounded in deterministic local data
 - **Settings** — notification preferences, alert sensitivity, module visibility
 
 ### Technical Features
@@ -32,7 +32,7 @@ A runnable local-first Flutter mobile app for daily senior support and family co
 - **Persisted events** — all user actions recorded and queryable
 - **Deterministic status engine** — real-time status (ok / watch / actionRequired)
 - **Local notifications** — alerts for missed check-ins, medication, emergencies, safe-zone exits
-- **Voice gateway integration** — optional external STT/TTS with deterministic local fallback
+- **Voice gateway integration** — optional experimental external STT/TTS; local fallback is the official demo mode
 - **Demo controls** — easy reseed/reset for testing and demos
 - **Native permissions** — notifications and location on iOS/Android
 
@@ -77,8 +77,9 @@ Valid values: `dev`, `staging`, `prod`
 ## Voice Companion
 
 The app includes optional voice gateway integration for Tunisian Arabic STT/TTS.
+For final demo reliability, **`local_fallback` is the default and recommended mode**.
 
-### Local Fallback Mode (default)
+### Local Fallback Mode (default, recommended)
 
 The app runs entirely local-first by default with deterministic voice responses:
 
@@ -86,11 +87,11 @@ The app runs entirely local-first by default with deterministic voice responses:
 fvm flutter run --dart-define=APP_ENV=dev
 ```
 
-This works offline and is ideal for demos without external dependencies.
+This is the official demo mode and does not require an external voice gateway.
 
-### External Gateway Mode (optional)
+### External Gateway Mode (optional, experimental)
 
-To test against an external voice gateway:
+Only enable this when the gateway has been validated on the demo network:
 
 ```bash
 fvm flutter run \
@@ -111,8 +112,8 @@ The app follows this startup sequence:
 
 From **Settings**, you can:
 - **Clear Session** → sign out and return to onboarding
-- **Reseed Demo Data** → recreate demo profiles and sample data
-- **Reset Demo Data** → full reset including session
+- **Reseed Demo Data** → clear structured and lightweight persisted state, then recreate deterministic demo profiles
+- **Reset Demo Data** → clear all local demo state (structured + lightweight) and return to onboarding
 
 ## Routes
 
@@ -221,8 +222,8 @@ lib/
 
 - `docs/setup.md` — detailed setup instructions
 - `docs/architecture.md` — architecture overview and extension patterns
-- `docs/demo_runbook.md` — demo walkthrough and scenarios
-- `docs/qa_checklist.md` — QA and testing checklist
+- `docs/demo_runbook_g8.md` — final demo walkthrough and contingency plan
+- `docs/final_qa_checklist_g8.md` — final QA closure checklist
 
 ## Support
 

@@ -25,6 +25,7 @@ class _FakeLogger implements AppLogger {
 
 class _FakeStorageService implements StorageService {
   bool initialized = false;
+  final Map<String, Object?> _values = <String, Object?>{};
 
   @override
   Future<void> initialize() async {
@@ -32,7 +33,7 @@ class _FakeStorageService implements StorageService {
   }
 
   @override
-  bool? getBool(String key) => null;
+  bool? getBool(String key) => _values[key] as bool?;
 
   @override
   double? getDouble(String key) => null;
@@ -50,7 +51,10 @@ class _FakeStorageService implements StorageService {
   Future<bool> remove(String key) async => true;
 
   @override
-  Future<bool> setBool(String key, bool value) async => true;
+  Future<bool> setBool(String key, bool value) async {
+    _values[key] = value;
+    return true;
+  }
 
   @override
   Future<bool> setDouble(String key, double value) async => true;
@@ -118,6 +122,34 @@ class _FakeDemoSeedRepository implements DemoSeedRepository {
   }
 }
 
+class _FakePermissionService implements PermissionService {
+  int notificationRequests = 0;
+  int locationRequests = 0;
+
+  @override
+  Future<AppPermissionStatus> locationStatus() async =>
+      AppPermissionStatus.denied;
+
+  @override
+  Future<AppPermissionStatus> notificationStatus() async =>
+      AppPermissionStatus.denied;
+
+  @override
+  Future<bool> openSystemSettings() async => true;
+
+  @override
+  Future<AppPermissionStatus> requestLocationPermission() async {
+    locationRequests += 1;
+    return AppPermissionStatus.granted;
+  }
+
+  @override
+  Future<AppPermissionStatus> requestNotificationPermission() async {
+    notificationRequests += 1;
+    return AppPermissionStatus.granted;
+  }
+}
+
 void main() {
   test('AppInitializer initializes storage, Hive, seeding, and notifications',
       () async {
@@ -126,6 +158,7 @@ void main() {
     final hiveInitializer = _FakeHiveInitializer();
     final demoSeedRepository = _FakeDemoSeedRepository();
     final notifications = _FakeNotificationService();
+    final permissions = _FakePermissionService();
 
     final initializer = AppInitializer(
       logger: logger,
@@ -133,6 +166,7 @@ void main() {
       hiveInitializer: hiveInitializer,
       demoSeedRepository: demoSeedRepository,
       notificationService: notifications,
+      permissionService: permissions,
     );
 
     await initializer.initialize();
@@ -141,6 +175,8 @@ void main() {
     expect(hiveInitializer.initialized, isTrue);
     expect(demoSeedRepository.seeded, isTrue);
     expect(notifications.initialized, isTrue);
+    expect(permissions.notificationRequests, 1);
+    expect(permissions.locationRequests, 1);
     expect(
       logger.infoLogs,
       containsAllInOrder(<String>[

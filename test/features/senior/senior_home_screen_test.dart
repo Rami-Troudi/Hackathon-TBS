@@ -20,6 +20,7 @@ import 'package:senior_companion/shared/models/settings_preferences.dart';
 
 SeniorHomeData _buildSeniorHomeData({
   bool simplifiedMode = false,
+  CheckInStatus checkInStatus = CheckInStatus.completed,
 }) {
   return SeniorHomeData(
     activeSeniorId: 'senior-1',
@@ -44,7 +45,7 @@ SeniorHomeData _buildSeniorHomeData({
       simplifiedModeEnabled: simplifiedMode,
     ),
     checkInState: CheckInState(
-      status: CheckInStatus.pending,
+      status: checkInStatus,
       windowLabel: 'Daily morning check-in',
       windowStart: DateTime(2026, 4, 18, 8),
       windowEnd: DateTime(2026, 4, 18, 12),
@@ -87,7 +88,7 @@ SeniorHomeData _buildSeniorHomeData({
       ),
       slotLabel: 'Morning',
       scheduledAt: DateTime(2026, 4, 18, 8),
-      status: MedicationReminderStatus.pending,
+      status: MedicationReminderStatus.taken,
     ),
     recentEvents: const [],
   );
@@ -132,8 +133,7 @@ class _FakeCheckInRepository implements CheckInRepository {
 }
 
 void main() {
-  testWidgets('senior home keeps secondary actions behind More options',
-      (tester) async {
+  testWidgets('senior home exposes secondary actions directly', (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -156,24 +156,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
-    expect(find.text('Hydration'), findsNothing);
-    expect(find.text('Meals'), findsNothing);
-    expect(find.text('Daily summary'), findsNothing);
-    expect(find.text('Talk to Companion'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('More options'),
-      300,
-    );
-    await tester.ensureVisible(find.text('More options'));
-    await tester.pumpAndSettle();
-    expect(find.text('More options'), findsOneWidget);
-
-    await tester.tap(find.text('More options'));
-    await tester.pumpAndSettle();
-
     expect(find.text('Hydration'), findsOneWidget);
     expect(find.text('Meals'), findsOneWidget);
     expect(find.text('Daily summary'), findsOneWidget);
+    expect(find.text('Talk to Companion'), findsOneWidget);
+    expect(find.text('More options'), findsNothing);
   });
 
   testWidgets('senior home shows offline banner in offline mode',
@@ -229,5 +216,27 @@ void main() {
     await tester.tap(find.text('I need help'));
     await tester.pumpAndSettle();
     expect(repository.markNeedHelpCalled, isTrue);
+  });
+
+  testWidgets('senior home hides legacy check-in and incident menu links',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          seniorHomeDataProvider.overrideWith(
+            (ref) async => _buildSeniorHomeData(simplifiedMode: true),
+          ),
+          connectivityStateProvider.overrideWith(
+            (ref) => Stream.value(AppConnectivityState.online),
+          ),
+        ],
+        child: const MaterialApp(home: SeniorHomeScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Open check-in screen'), findsNothing);
+    expect(find.text('Open incident help'), findsNothing);
   });
 }
