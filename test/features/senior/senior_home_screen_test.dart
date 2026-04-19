@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
+import 'package:senior_companion/core/events/persisted_event_record.dart';
+import 'package:senior_companion/core/repositories/check_in_repository.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/features/senior/senior_home_screen.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
@@ -91,6 +93,44 @@ SeniorHomeData _buildSeniorHomeData({
   );
 }
 
+class _FakeCheckInRepository implements CheckInRepository {
+  bool markCompletedCalled = false;
+  bool markNeedHelpCalled = false;
+
+  @override
+  Future<List<PersistedEventRecord>> fetchRecentCheckIns(
+    String seniorId, {
+    int limit = 10,
+  }) async =>
+      const <PersistedEventRecord>[];
+
+  @override
+  Future<CheckInState> getTodayState(
+    String seniorId, {
+    DateTime? now,
+    bool reconcileMissedWindow = true,
+  }) async {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> markCheckInCompleted(
+    String seniorId, {
+    DateTime? now,
+  }) async {
+    markCompletedCalled = true;
+    return true;
+  }
+
+  @override
+  Future<void> markNeedHelp(
+    String seniorId, {
+    DateTime? now,
+  }) async {
+    markNeedHelpCalled = true;
+  }
+}
+
 void main() {
   testWidgets('senior home keeps secondary actions behind More options',
       (tester) async {
@@ -151,5 +191,35 @@ void main() {
       find.text('Showing local data only until connectivity is restored.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('senior home quick actions trigger check-in repository actions',
+      (tester) async {
+    final repository = _FakeCheckInRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          seniorHomeDataProvider.overrideWith(
+            (ref) async => _buildSeniorHomeData(simplifiedMode: true),
+          ),
+          connectivityStateProvider.overrideWith(
+            (ref) => Stream.value(AppConnectivityState.online),
+          ),
+          checkInRepositoryProvider.overrideWithValue(repository),
+        ],
+        child: const MaterialApp(home: SeniorHomeScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text("I'm okay"));
+    await tester.pumpAndSettle();
+    expect(repository.markCompletedCalled, isTrue);
+
+    await tester.tap(find.text('I need help'));
+    await tester.pumpAndSettle();
+    expect(repository.markNeedHelpCalled, isTrue);
   });
 }

@@ -1,4 +1,4 @@
-# Senior Companion - Group 7 Prototype (AI Companion + Smart Insights)
+# Senior Companion — Prototype (G0→G7, stabilized in G7.2)
 
 This repository contains **Group 0 + Group 1 + Group 2 + Group 3 + Group 4 + Group 5 + Group 7** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, and a grounded AI companion/insights layer.
 
@@ -63,7 +63,8 @@ Included:
 Not included:
 - Backend/server setup
 - Docker/devops
-- Database infrastructure
+- Server-side database infrastructure
+- Cloud auth
 - mandatory backend/cloud AI infrastructure
 - Full business-domain features
 
@@ -86,10 +87,7 @@ Not included:
    fvm install
    ```
 3. Open the workspace in VS Code/Cursor and install the recommended extensions when prompted.
-4. Generate platform folders (one-time in this repo):
-   ```bash
-   fvm flutter create . --platforms=android,ios
-   ```
+4. Platform folders are already committed in this repository (`android/`, `ios/`).
 5. Fetch dependencies:
    ```bash
    fvm flutter pub get
@@ -282,14 +280,10 @@ From **Settings**:
 
 ## Native platform note (important)
 
-This repository does not commit `android/` and `ios/` folders. After:
-
-```bash
-fvm flutter create . --platforms=android,ios
-```
-
-apply the native checklist in `docs/setup.md` before expecting notification and
-location permission behavior to match physical devices.
+`android/` and `ios/` are committed. If you regenerate platforms locally, keep
+permission declarations aligned with current prototype features:
+- Android: notifications + location in `android/app/src/main/AndroidManifest.xml`
+- iOS: in-use location usage description in `ios/Runner/Info.plist`
 
 ## Project structure
 
@@ -336,3 +330,5 @@ lib/
 
 - `docs/setup.md` - setup and run instructions
 - `docs/architecture.md` - architecture and extension guidance for next groups
+- `docs/release_readiness_g7_2.md` - current implementation status and non-goals
+- `docs/qa_test_matrix_g7_2.md` - manual QA matrix for demo/validation

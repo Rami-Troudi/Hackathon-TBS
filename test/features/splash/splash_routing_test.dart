@@ -242,4 +242,36 @@ void main() {
 
     expect(find.text('Today'), findsOneWidget);
   });
+
+  testWidgets('routes to Guardian screen when active role is guardian',
+      (tester) async {
+    final prefs = _FakePreferencesRepository(role: AppRole.guardian);
+    final sessionRepo = _FakeSessionRepository(
+      AppSession(
+        activeRole: AppRole.guardian,
+        activeProfileId: 'guardian-1',
+        startedAt: DateTime.parse('2026-04-18T10:00:00Z'),
+      ),
+    );
+    final profileRepo = _FakeProfileRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: <Override>[
+          preferencesRepositoryProvider.overrideWithValue(prefs),
+          appSessionRepositoryProvider.overrideWithValue(sessionRepo),
+          profileRepositoryProvider.overrideWithValue(profileRepo),
+          dashboardRepositoryProvider
+              .overrideWithValue(_FakeDashboardRepository()),
+        ],
+        child: const SeniorCompanionApp(),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Guardian Dashboard'), findsOneWidget);
+  });
 }

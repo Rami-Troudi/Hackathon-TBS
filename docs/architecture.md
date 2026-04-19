@@ -3,6 +3,11 @@
 This document describes the technical architecture after **Group 7** and serves
 as the implementation guide for future milestones.
 
+Current deployment model remains **mobile-only and local-first**:
+- no backend/server runtime
+- no cloud database/auth stack
+- no Docker/infra requirements
+
 ---
 
 ## Table of contents
@@ -752,7 +757,7 @@ lib/features/check_in/
 
 In `lib/app/router/app_routes.dart`:
 ```dart
-static const checkIn = '/check-in';
+static const checkIn = '/senior/check-in';
 ```
 
 In `lib/app/router/app_router.dart`, add a `GoRoute` to the routes list:
