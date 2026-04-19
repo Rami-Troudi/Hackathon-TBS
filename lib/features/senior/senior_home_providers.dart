@@ -3,6 +3,7 @@ import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
 import 'package:senior_companion/shared/models/hydration_state.dart';
+import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
 import 'package:senior_companion/shared/models/meal_state.dart';
 import 'package:senior_companion/shared/models/safe_zone_status.dart';
@@ -20,6 +21,7 @@ class SeniorHomeData {
     required this.checkInState,
     required this.hydrationState,
     required this.nutritionState,
+    required this.incidentState,
     required this.safeZoneStatus,
     required this.nextReminder,
     required this.recentEvents,
@@ -32,6 +34,7 @@ class SeniorHomeData {
   final CheckInState checkInState;
   final HydrationState hydrationState;
   final NutritionState nutritionState;
+  final IncidentFlowState incidentState;
   final SafeZoneStatus safeZoneStatus;
   final MedicationReminder? nextReminder;
   final List<PersistedEventRecord> recentEvents;
@@ -46,6 +49,7 @@ final seniorHomeDataProvider =
   final medicationRepository = ref.watch(medicationRepositoryProvider);
   final hydrationRepository = ref.watch(hydrationRepositoryProvider);
   final nutritionRepository = ref.watch(nutritionRepositoryProvider);
+  final incidentRepository = ref.watch(incidentRepositoryProvider);
   final safeZoneRepository = ref.watch(safeZoneRepositoryProvider);
   final settingsRepository = ref.watch(settingsRepositoryProvider);
   final eventRepository = ref.watch(eventRepositoryProvider);
@@ -75,6 +79,11 @@ final seniorHomeDataProvider =
         dailyGoalCompletions: 3,
       ),
       nutritionState: const NutritionState(slots: <MealSlotState>[]),
+      incidentState: const IncidentFlowState(
+        status: IncidentFlowStatus.clear,
+        openSuspectedIncidents: 0,
+        openConfirmedIncidents: 0,
+      ),
       safeZoneStatus: const SafeZoneStatus(
         location: null,
         activeZone: null,
@@ -102,6 +111,7 @@ final seniorHomeDataProvider =
     activeSeniorId,
     reconcileMissedMeals: true,
   );
+  final incidentState = await incidentRepository.getCurrentState(activeSeniorId);
   await safeZoneRepository.seedDefaultZonesIfNeeded(activeSeniorId);
   final safeZoneStatus =
       await safeZoneRepository.getCurrentStatus(activeSeniorId);
@@ -120,6 +130,7 @@ final seniorHomeDataProvider =
     checkInState: checkInState,
     hydrationState: hydrationState,
     nutritionState: nutritionState,
+    incidentState: incidentState,
     safeZoneStatus: safeZoneStatus,
     nextReminder: nextReminder,
     recentEvents: recentEvents,

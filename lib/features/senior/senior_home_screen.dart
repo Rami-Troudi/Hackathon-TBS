@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,12 +11,12 @@ import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/localization/app_tr.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
+import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
 import 'package:senior_companion/shared/widgets/connectivity_banner.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class SeniorHomeScreen extends ConsumerStatefulWidget {
   const SeniorHomeScreen({super.key});
@@ -74,8 +76,48 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
     if (!mounted || data.activeSeniorId == null) return;
     final reminder = data.nextReminder;
     final promptToken =
-        '${data.checkInState.status.name}-${reminder?.plan.id}-${reminder?.status.name}';
+        '${data.incidentState.status.name}-${data.incidentState.openConfirmedIncidents}-${data.incidentState.openSuspectedIncidents}-${data.checkInState.status.name}-${reminder?.plan.id}-${reminder?.status.name}';
     if (_lastPromptToken == promptToken) return;
+
+    if (data.incidentState.status == IncidentFlowStatus.suspected ||
+        data.incidentState.status == IncidentFlowStatus.confirmed) {
+      _lastPromptToken = promptToken;
+      final result = await showDialog<_IncidentPromptResult>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => IncidentCountdownDialog(
+          title: tr(
+            context,
+            fr: 'Vous allez bien ?',
+            en: 'Are you okay?',
+            ar: 'هل أنت بخير؟',
+          ),
+          message: tr(
+            context,
+            fr:
+                'Un incident a été détecté. Répondez dans 60 secondes pour éviter l’escalade d’urgence.',
+            en:
+                'An incident was detected. Respond within 60 seconds to avoid emergency escalation.',
+            ar:
+                'تم رصد حادثة. استجب خلال 60 ثانية لتفادي تصعيد الطوارئ.',
+          ),
+          okLabel: tr(context, fr: 'Oui, je vais bien', en: 'Yes, I am okay', ar: 'نعم، أنا بخير'),
+          helpLabel: tr(context, fr: 'J’ai besoin d’aide', en: 'I need help', ar: 'أحتاج مساعدة'),
+        ),
+      );
+      if (!mounted) return;
+      if (result == _IncidentPromptResult.ok) {
+        await ref.read(incidentRepositoryProvider).dismissIncident(
+              data.activeSeniorId!,
+            );
+      } else {
+        await ref.read(incidentRepositoryProvider).requestImmediateHelp(
+              data.activeSeniorId!,
+            );
+      }
+      ref.invalidate(seniorHomeDataProvider);
+      return;
+    }
 
     if (data.checkInState.status != CheckInStatus.completed) {
       _lastPromptToken = promptToken;
@@ -320,7 +362,6 @@ class _SeniorHomeContent extends ConsumerWidget {
               ),
             );
           },
-          onEmergencyCall: () => _launchEmergencyDialer(context),
           onCompanion: () => context.push(AppRoutes.seniorCompanion),
         ),
         const SizedBox(height: AppSpacing.md),
@@ -349,57 +390,8 @@ class _SeniorHomeContent extends ConsumerWidget {
                   ref.invalidate(seniorHomeDataProvider);
                 },
         ),
-        const SizedBox(height: AppSpacing.md),
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            FilledButton.tonal(
-              onPressed: () => context.push(AppRoutes.seniorHydration),
-              child: Text(
-                tr(context, fr: 'Hydratation', en: 'Hydration', ar: 'الترطيب'),
-              ),
-            ),
-            FilledButton.tonal(
-              onPressed: () => context.push(AppRoutes.seniorNutrition),
-              child: Text(
-                tr(context, fr: 'Repas', en: 'Meals', ar: 'الوجبات'),
-              ),
-            ),
-            FilledButton.tonal(
-              onPressed: () => context.push(AppRoutes.seniorSummary),
-              child: Text(
-                tr(
-                  context,
-                  fr: 'Résumé du jour',
-                  en: 'Daily summary',
-                  ar: 'ملخص اليوم',
-                ),
-              ),
-            ),
-          ],
-        ),
       ],
     );
-  }
-
-  Future<void> _launchEmergencyDialer(BuildContext context) async {
-    final uri = Uri.parse('tel:198');
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            tr(
-              context,
-              fr: 'Impossible d’ouvrir l’appel d’urgence',
-              en: 'Could not open emergency dialer',
-              ar: 'تعذر فتح الاتصال بالطوارئ',
-            ),
-          ),
-        ),
-      );
-    }
   }
 }
 
@@ -433,14 +425,12 @@ class _PrimaryActionCard extends StatelessWidget {
     required this.checkInState,
     required this.onPrimaryAction,
     required this.onHelpAction,
-    required this.onEmergencyCall,
     required this.onCompanion,
   });
 
   final CheckInState checkInState;
   final VoidCallback onPrimaryAction;
   final VoidCallback onHelpAction;
-  final VoidCallback onEmergencyCall;
   final VoidCallback onCompanion;
 
   @override
@@ -507,24 +497,6 @@ class _PrimaryActionCard extends StatelessWidget {
         BigAction(
           label: tr(
             context,
-            fr: 'Appel d’urgence',
-            en: 'Emergency call',
-            ar: 'اتصال طوارئ',
-          ),
-          subtitle: tr(
-            context,
-            fr: 'Appeler le 198 maintenant',
-            en: 'Call 198 now',
-            ar: 'اتصل بـ 198 الآن',
-          ),
-          icon: Icons.local_phone_outlined,
-          tone: BigActionTone.destructive,
-          onTap: onEmergencyCall,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        BigAction(
-          label: tr(
-            context,
             fr: 'Parler au Companion',
             en: 'Talk to Companion',
             ar: 'تحدث مع المرافق',
@@ -535,6 +507,114 @@ class _PrimaryActionCard extends StatelessWidget {
           onTap: onCompanion,
         ),
       ],
+    );
+  }
+}
+
+enum _IncidentPromptResult {
+  ok,
+  help,
+  timeout,
+}
+
+class IncidentCountdownDialog extends StatefulWidget {
+  const IncidentCountdownDialog({
+    super.key,
+    required this.title,
+    required this.message,
+    required this.okLabel,
+    required this.helpLabel,
+    this.initialSeconds = 60,
+  });
+
+  final String title;
+  final String message;
+  final String okLabel;
+  final String helpLabel;
+  final int initialSeconds;
+
+  @override
+  State<IncidentCountdownDialog> createState() => _IncidentCountdownDialogState();
+}
+
+class _IncidentCountdownDialogState extends State<IncidentCountdownDialog> {
+  late int _remainingSeconds;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _remainingSeconds = widget.initialSeconds;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+      if (_remainingSeconds <= 1) {
+        timer.cancel();
+        Navigator.of(context).pop(_IncidentPromptResult.timeout);
+        return;
+      }
+      setState(() => _remainingSeconds -= 1);
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog.fullscreen(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              Icon(
+                Icons.health_and_safety_outlined,
+                size: 84,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                widget.title,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.headlineLarge,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                widget.message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(
+                '$_remainingSeconds s',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.displaySmall,
+              ),
+              const Spacer(),
+              SizedBox(
+                height: 62,
+                child: FilledButton(
+                  onPressed: () => Navigator.of(context).pop(_IncidentPromptResult.ok),
+                  child: Text(widget.okLabel),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              SizedBox(
+                height: 62,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(_IncidentPromptResult.help),
+                  child: Text(widget.helpLabel),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

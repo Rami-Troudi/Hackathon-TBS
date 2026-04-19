@@ -5,11 +5,13 @@ import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/core/repositories/check_in_repository.dart';
+import 'package:senior_companion/core/repositories/incident_repository.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/features/senior/senior_home_screen.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
 import 'package:senior_companion/shared/models/hydration_state.dart';
+import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/models/meal_state.dart';
 import 'package:senior_companion/shared/models/medication_plan.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
@@ -21,6 +23,7 @@ import 'package:senior_companion/shared/models/settings_preferences.dart';
 SeniorHomeData _buildSeniorHomeData({
   bool simplifiedMode = false,
   CheckInStatus checkInStatus = CheckInStatus.completed,
+  IncidentFlowStatus incidentStatus = IncidentFlowStatus.clear,
 }) {
   return SeniorHomeData(
     activeSeniorId: 'senior-1',
@@ -70,6 +73,11 @@ SeniorHomeData _buildSeniorHomeData({
           status: MealSlotStatus.pending,
         ),
       ],
+    ),
+    incidentState: IncidentFlowState(
+      status: incidentStatus,
+      openSuspectedIncidents: incidentStatus == IncidentFlowStatus.suspected ? 1 : 0,
+      openConfirmedIncidents: incidentStatus == IncidentFlowStatus.confirmed ? 1 : 0,
     ),
     safeZoneStatus: const SafeZoneStatus(
       location: null,
@@ -132,8 +140,46 @@ class _FakeCheckInRepository implements CheckInRepository {
   }
 }
 
+class _FakeIncidentRepository implements IncidentRepository {
+  bool dismissCalled = false;
+  bool immediateHelpCalled = false;
+
+  @override
+  Future<void> confirmIncident(String seniorId, {DateTime? now}) async {}
+
+  @override
+  Future<void> dismissIncident(String seniorId, {DateTime? now}) async {
+    dismissCalled = true;
+  }
+
+  @override
+  Future<IncidentFlowState> getCurrentState(String seniorId) async {
+    return const IncidentFlowState(
+      status: IncidentFlowStatus.clear,
+      openSuspectedIncidents: 0,
+      openConfirmedIncidents: 0,
+    );
+  }
+
+  @override
+  Future<void> reportSuspiciousIncident(
+    String seniorId, {
+    DateTime? now,
+    double confidenceScore = 0.75,
+  }) async {}
+
+  @override
+  Future<void> requestImmediateHelp(String seniorId, {DateTime? now}) async {
+    immediateHelpCalled = true;
+  }
+
+  @override
+  Future<void> triggerEmergency(String seniorId, {DateTime? now}) async {}
+}
+
 void main() {
-  testWidgets('senior home exposes secondary actions directly', (tester) async {
+  testWidgets('senior home removes extra secondary module actions',
+      (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -156,11 +202,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
 
-    expect(find.text('Hydration'), findsOneWidget);
-    expect(find.text('Meals'), findsOneWidget);
-    expect(find.text('Daily summary'), findsOneWidget);
+    expect(find.text('Hydration'), findsNothing);
+    expect(find.text('Meals'), findsNothing);
+    expect(find.text('Daily summary'), findsNothing);
     expect(find.text('Talk to Companion'), findsOneWidget);
     expect(find.text('More options'), findsNothing);
+    expect(find.text('Emergency call'), findsNothing);
+    expect(find.text('Call 198 now'), findsNothing);
   });
 
   testWidgets('senior home shows offline banner in offline mode',
@@ -238,5 +286,36 @@ void main() {
 
     expect(find.text('Open check-in screen'), findsNothing);
     expect(find.text('Open incident help'), findsNothing);
+  });
+
+  testWidgets('incident countdown prompt allows dismiss when senior confirms',
+      (tester) async {
+    final incidentRepository = _FakeIncidentRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          seniorHomeDataProvider.overrideWith(
+            (ref) async => _buildSeniorHomeData(
+              incidentStatus: IncidentFlowStatus.suspected,
+            ),
+          ),
+          connectivityStateProvider.overrideWith(
+            (ref) => Stream.value(AppConnectivityState.online),
+          ),
+          incidentRepositoryProvider.overrideWithValue(incidentRepository),
+        ],
+        child: const MaterialApp(home: SeniorHomeScreen()),
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    expect(find.text('Are you okay?'), findsOneWidget);
+    await tester.tap(find.text('Yes, I am okay'));
+    await tester.pumpAndSettle();
+
+    expect(incidentRepository.dismissCalled, isTrue);
+    expect(incidentRepository.immediateHelpCalled, isFalse);
   });
 }
