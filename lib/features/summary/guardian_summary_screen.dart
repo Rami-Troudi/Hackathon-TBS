@@ -1,0 +1,104 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:senior_companion/app/router/app_routes.dart';
+import 'package:senior_companion/features/summary/summary_providers.dart';
+import 'package:senior_companion/shared/constants/app_spacing.dart';
+import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
+import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
+
+class GuardianSummaryScreen extends ConsumerWidget {
+  const GuardianSummaryScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(guardianSummaryDataProvider);
+    return AppScaffoldShell(
+      title: 'Daily digest',
+      role: AppShellRole.guardian,
+      currentRoute: AppRoutes.guardianSummary,
+      child: summaryAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, _) =>
+            Center(child: Text('Could not load digest: $error')),
+        data: (data) {
+          final profileName = data.seniorProfile?.displayName;
+          final summary = data.summary;
+          return ListView(
+            children: [
+              Text(
+                profileName == null ? 'Linked senior' : 'For $profileName',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              Gaps.v8,
+              AppCard(
+                tone: AppCardTone.sage,
+                child: Text(
+                  summary.headline,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+              Gaps.v16,
+              _DigestSection(
+                title: 'What is going well',
+                items: summary.whatWentWell,
+                emptyLabel: 'No positive highlights yet.',
+              ),
+              Gaps.v16,
+              _DigestSection(
+                title: 'Needs attention',
+                items: summary.needsAttention,
+                emptyLabel: 'Nothing urgent right now.',
+              ),
+              Gaps.v16,
+              _DigestSection(
+                title: 'Notable events',
+                items: summary.notableEvents,
+                emptyLabel: 'No notable events yet.',
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _DigestSection extends StatelessWidget {
+  const _DigestSection({
+    required this.title,
+    required this.items,
+    required this.emptyLabel,
+  });
+
+  final String title;
+  final List<String> items;
+  final String emptyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          Gaps.v8,
+          if (items.isEmpty)
+            Text(emptyLabel)
+          else
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('• '),
+                    Expanded(child: Text(item)),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}

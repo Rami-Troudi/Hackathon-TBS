@@ -1,0 +1,927 @@
+# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7 + G8)
+
+This document describes the technical architecture after **Group 8** and serves
+as the implementation guide for future milestones.
+
+Current deployment model remains **mobile-only and local-first**:
+- no backend/server runtime
+- no cloud database/auth stack
+- no Docker/infra requirements
+
+---
+
+## Table of contents
+
+1. [Layer overview](#1-layer-overview)
+2. [Bootstrap flow](#2-bootstrap-flow)
+3. [Dependency injection with Riverpod](#3-dependency-injection-with-riverpod)
+4. [Repository pattern](#4-repository-pattern)
+5. [Event bus](#5-event-bus)
+6. [Notification service](#6-notification-service)
+7. [Storage service](#7-storage-service)
+8. [Error handling and AppResult](#8-error-handling-and-appresult)
+9. [Theme and design system](#9-theme-and-design-system)
+10. [Routing](#10-routing)
+11. [How to add a new feature module](#11-how-to-add-a-new-feature-module)
+12. [How to add a new repository](#12-how-to-add-a-new-repository)
+13. [Voice and assistant layer](#13-voice-and-assistant-layer)
+14. [Known prototype limitations](#14-known-prototype-limitations)
+
+---
+
+## 1. Layer overview
+
+```
+lib/
+  app/          — App shell: bootstrap, routing, theme
+  core/         — Technical services, abstractions, cross-cutting concerns
+  features/     — Feature modules (one folder per product feature)
+  shared/       — Models, widgets, constants, utils shared across features
+```
+
+### `lib/app`
+
+Contains only the app-level wiring. Nothing domain-specific lives here.
+
+| Path | Responsibility |
+|---|---|
+| `app/app.dart` | Root `MaterialApp.router` widget |
+| `app/bootstrap/app_bootstrap.dart` | Constructs services, returns `ProviderScope` overrides |
+| `app/bootstrap/app_initializer.dart` | Awaits async service initialization at startup |
+| `app/bootstrap/providers.dart` | All root Riverpod providers, injected at bootstrap |
+| `app/router/app_router.dart` | `GoRouter` route definitions |
+| `app/router/app_routes.dart` | Route path string constants |
+| `app/theme/app_theme.dart` | `ThemeData` + `AppStatusColors` extension |
+| `app/theme/app_colors.dart` | Colour constants |
+
+### `lib/core`
+
+Cross-cutting technical services. Features import from here; core never
+imports from features.
+
+| Folder | Responsibility |
+|---|---|
+| `connectivity/` | Connectivity mode service (`online/degraded/offline`) for degraded-state UX scaffolding |
+| `config/` | Environment-aware app configuration |
+| `ai/` | Local context + prompt/fallback/explanation services for senior and guardian assistant surfaces |
+| `errors/` | `AppException` + `AppErrorMapper` |
+| `events/` | Sealed `AppEvent` hierarchy, `AppEventBus`, persisted event mapping, status engine |
+| `logging/` | `AppLogger` abstraction + `DebugAppLogger` |
+| `networking/` | Dio client + `ApiClient.guard()` + error mapping |
+| `notifications/` | `NotificationService` abstraction, local implementation, event notification dispatcher |
+| `permissions/` | `PermissionService` abstraction + implementation |
+| `repositories/` | Repository interfaces + `local/` implementations |
+| `storage/` | SharedPreferences storage + Hive structured storage bootstrap |
+| `voice/` | Voice gateway client, recorder/playback services, and senior voice companion repository |
+
+### `lib/features`
+
+One folder per product feature. Each folder is self-contained:
+
+```
+features/
+  my_feature/
+    my_feature_screen.dart     — UI
+    my_feature_providers.dart  — Riverpod providers
+    my_feature_repository.dart — (optional) feature-specific repository interface
+```
+
+Features may import from `core/` and `shared/`. They must **not** import from
+other feature folders directly — use the event bus for cross-feature communication.
+
+### `lib/shared`
+
+Reusable code with no feature ownership.
+
+| Folder | Responsibility |
+|---|---|
+| `models/` | Base enums and value objects (`AppRole`, `AppResult`, `SeniorGlobalStatus`, …) |
+| `widgets/` | Reusable UI components (`AppScaffoldShell`, `FeaturePlaceholderCard`) |
+| `constants/` | `AppSpacing`, `Gaps`, `AppBorderRadius`, `AppConstants` |
+| `utils/` | Pure utility functions (`toFriendlyErrorMessage`) |
+
+---
+
+## 2. Bootstrap flow
+
+```
+main()
+  │
+  ├─ AppEnvironment resolved from --dart-define=APP_ENV
+  │
+  └─ AppBootstrap.bootstrap(environment)
+       │
+       ├─ DebugAppLogger constructed
+       ├─ AppConfig.fromEnvironment(environment)
+       ├─ SharedPreferencesStorageService constructed
+       ├─ HiveInitializer constructed
+       ├─ LocalProfileRepository constructed
+       ├─ LocalDemoSeedRepository constructed
+       ├─ PermissionHandlerPermissionService constructed
+       ├─ LocalConnectivityStateService constructed
+       ├─ LocalNotificationService constructed
+       │
+       └─ AppInitializer.initialize()
+            ├─ storageService.initialize()      ← awaited
+            ├─ hiveInitializer.initialize()     ← awaited
+            ├─ demoSeedRepository.seedIfNeeded() ← awaited
+            └─ notificationService.initialize() ← awaited
+       │
+       └─ connectivityStateService.initialize() ← awaited
+       │
+       └─ AppBootstrapData returned
+            ├─ overrides: List<Override>   ← injected into ProviderScope
+            └─ logger: AppLogger           ← used for global error handlers
+  │
+  ├─ FlutterError.onError wired
+  ├─ PlatformDispatcher.instance.onError wired
+  │
+  └─ runZonedGuarded
+       └─ runApp(ProviderScope(overrides: ..., child: SeniorCompanionApp()))
+```
+
+All services are constructed **before** `runApp`. The `ProviderScope` overrides
+ensure every provider in `providers.dart` that declares
+`throw UnimplementedError(...)` as its default is replaced with the real
+instance before any widget reads it.
+
+---
+
+## 3. Dependency injection with Riverpod
+
+All providers are declared in `lib/app/bootstrap/providers.dart`.
+
+### Bootstrap-injected providers
+
+These providers throw `UnimplementedError` by default — they **must** be
+overridden in `AppBootstrap`. Reading them before the override is applied
+is a programming error and will crash immediately.
+
+```dart
+final appConfigProvider = Provider<AppConfig>(
+  (_) => throw UnimplementedError('must be overridden at bootstrap'),
+);
+```
+
+### Derived providers
+
+Providers that depend on bootstrap providers are declared normally. Riverpod
+resolves the dependency graph automatically.
+
+```dart
+final dioProvider = Provider<Dio>((ref) {
+  final config = ref.watch(appConfigProvider);
+  return buildDioClient(config, logger: ref.watch(appLoggerProvider));
+});
+```
+
+### Feature providers
+
+Feature-specific providers live in their own feature folder, not in
+`providers.dart`. They read core providers via `ref.watch` or `ref.read`:
+
+```dart
+// features/check_in/check_in_providers.dart
+final checkInSummaryProvider = FutureProvider.autoDispose((ref) async {
+  final repo = ref.watch(checkInRepositoryProvider);
+  return repo.getTodaySummary();
+});
+```
+
+### When to use `ref.watch` vs `ref.read`
+
+| Scenario | Use |
+|---|---|
+| Inside `build()` or a `FutureProvider` body — reactive dependency | `ref.watch` |
+| Inside a button callback, gesture handler, or user action | `ref.read` |
+| Inside `initState` or lifecycle methods | `ref.read` |
+
+Never call `ref.watch` inside callbacks — it will throw at runtime.
+
+---
+
+## 4. Repository pattern
+
+### Interface location
+
+All repository interfaces live in `lib/core/repositories/`.
+
+```dart
+// lib/core/repositories/check_in_repository.dart
+abstract class CheckInRepository {
+  Future<CheckInSummary> getTodaySummary(String seniorId);
+  Future<void> recordCheckIn(String seniorId);
+  Future<List<CheckInEvent>> getHistory(String seniorId, {int limit = 20});
+}
+```
+
+### Implementation location
+
+Concrete implementations live in subfolders of `core/repositories/`:
+
+```
+core/repositories/
+  check_in_repository.dart          ← interface
+  local/
+  local_check_in_repository.dart  ← dedicated local store / in-memory implementation
+  remote/
+    remote_check_in_repository.dart ← HTTP implementation (future)
+```
+
+### Provider registration
+
+Register the repository in `providers.dart`, pointing at the local
+implementation for the prototype:
+
+```dart
+final checkInRepositoryProvider = Provider<CheckInRepository>(
+  (ref) => LocalCheckInRepository(
+    storage: ref.watch(storageServiceProvider),
+    logger: ref.watch(appLoggerProvider),
+  ),
+);
+```
+
+To switch to a remote implementation later, change only this one line.
+
+### Rules
+
+- Features depend on the **interface**, never on a concrete class.
+- Local implementations use `StorageService`, Hive, or in-memory lists for the prototype.
+- Mock implementations must use `_kMockDelay` before returning data so that
+  loading states are always exercised in the UI.
+
+### G2 event repository baseline
+
+Group 2 adds a reusable local-first event core:
+
+- `EventRepository` interface in `core/repositories/event_repository.dart`
+- `LocalEventRepository` backed by Hive `event_records` box
+- timeline/history query methods:
+  - per senior
+  - by event type
+  - recent events (newest first)
+  - guardian-linked seniors
+- explicit `AppEvent -> PersistedEventRecord` mapping via `AppEventMapper`
+
+---
+
+## 5. Event bus
+
+The event bus enables modules to communicate without direct coupling.
+
+### Publishing an event
+
+```dart
+await ref.read(appEventRecorderProvider).publishAndPersist(
+  CheckInCompletedEvent(
+    seniorId: session.activeProfileId,
+    happenedAt: DateTime.now(),
+  ),
+  source: 'developer',
+);
+```
+
+`AppEventRecorder` is the canonical G2 path for prototype actions that must both
+publish runtime events and persist timeline records.
+
+### Subscribing to events
+
+Subscribe inside a Riverpod `Notifier`, `StateNotifier`, or a service
+constructor. Cancel the subscription when the object is disposed.
+
+```dart
+class GuardianDashboardNotifier extends AutoDisposeNotifier<DashboardState> {
+  StreamSubscription<AppEvent>? _sub;
+
+  @override
+  DashboardState build() {
+    _sub = ref.read(appEventBusProvider).stream.listen(_onEvent);
+    ref.onDispose(() => _sub?.cancel());
+    return const DashboardState.initial();
+  }
+
+  void _onEvent(AppEvent event) {
+    switch (event) {
+      case CheckInCompletedEvent(:final seniorId):
+        // update dashboard state
+      case MedicationMissedEvent(:final medicationName):
+        // generate alert
+      default:
+        break;
+    }
+  }
+}
+```
+
+### Adding a new event type
+
+1. Add the new case to `AppEventType` enum in `app_event.dart`.
+2. Add a new `final class MyNewEvent extends AppEvent` with the relevant fields.
+3. Extend `AppEventMapper` so the event has a stable persisted payload.
+4. Every exhaustive `switch` in the codebase that handles `AppEvent` will
+   produce a compile-time warning until the new case is handled.
+
+### Rules
+
+- Events flow **one way**: producers publish, consumers subscribe.
+- Do not use the event bus to pass data back to the producer — use a
+  `Future` return value or a shared Riverpod provider instead.
+- Events must be immutable value objects. No mutable state in event payloads.
+
+---
+
+## 6. Notification service
+
+### Severity levels
+
+| Level | When to use |
+|---|---|
+| `info` | Routine reminders (medication due, check-in reminder) |
+| `warning` | Something needs attention (missed check-in, missed medication) |
+| `critical` | Immediate action required (unresolved incident, emergency) |
+
+### Product event notification wiring
+
+G8 wires notifications from the canonical event path:
+
+```text
+Feature action
+  -> AppEventRecorder.publishAndPersist()
+  -> EventRepository.addAppEvent()
+  -> AppEventNotificationDispatcher.dispatch()
+  -> NotificationService.showWarning/showCritical()
+```
+
+This keeps notification policy out of widgets and aligned with deterministic
+event/status logic.
+
+Current local notification triggers:
+
+| Event | Notification level |
+|---|---|
+| `checkInMissed` | warning |
+| `medicationMissed` | warning |
+| `hydrationMissed` | warning |
+| `mealMissed` | warning |
+| `incidentSuspected` | warning |
+| `incidentConfirmed` | critical, except when an emergency event immediately follows |
+| `emergencyTriggered` | critical |
+| `safeZoneExited` | warning |
+| `guardianAlertGenerated` | mapped from alert level |
+
+Completion/clear events do not produce notifications to avoid spam.
+
+### Permission handling
+
+The notification service checks permission before showing each notification.
+If permission is not granted, the notification is silently skipped with a log
+warning. Request permission explicitly from Settings:
+
+```dart
+await ref.read(notificationServiceProvider).requestPermission();
+```
+
+The dispatcher also checks the active profile's persisted notification setting.
+If there is no active session, notifications default to enabled for developer
+scenario testing.
+
+---
+
+## 7. Storage service
+
+Group 1 + Group 3 + Group 5 storage policy uses two layers:
+
+- `StorageService` (`SharedPreferences`) for lightweight preferences/flags/session.
+- Hive for structured local entities (profiles, links, event records, medication plans, safe zones, location state, future entities).
+
+### SharedPreferences usage
+
+`StorageService` remains a thin abstraction over SharedPreferences and should be
+used only for simple values.
+
+```dart
+final storage = ref.read(storageServiceProvider);
+
+// Write
+await storage.setString(StorageKeys.preferredRole, 'guardian');
+await storage.setBool(StorageKeys.notificationsEnabled, true);
+await storage.setStringList('dismissed_banners', ['v1.0', 'v1.1']);
+
+// Read
+final role = storage.getString(StorageKeys.preferredRole);
+final enabled = storage.getBool(StorageKeys.notificationsEnabled) ?? false;
+```
+
+### Adding a new storage key
+
+Add a `static const String` to `StorageKeys` in `lib/core/storage/storage_keys.dart`:
+
+```dart
+class StorageKeys {
+  static const appSession = 'app_session';
+  static const preferredRole = 'preferred_role';
+  static const myNewKey = 'my_new_key';  // ← add here
+}
+```
+
+Never use raw string literals for storage keys outside of `StorageKeys`.
+
+### Hive structured entity storage (G1)
+
+Hive is initialized during bootstrap via `HiveInitializer`, and these boxes are
+opened at startup:
+
+- `senior_profiles`
+- `guardian_profiles`
+- `profile_links`
+- `event_records`
+- `medication_plans`
+- `safe_zones`
+- `safe_zone_state`
+- `prototype_metadata`
+
+Local repositories use those boxes for profile/session-adjacent prototype data.
+
+### G2 status engine
+
+`SeniorStatusEngine` derives `SeniorGlobalStatus` from persisted events with
+deterministic, explainable rules:
+
+1. emergency event or unresolved confirmed incident -> `actionRequired`
+2. unresolved suspected incident -> `watch` (unless already escalated)
+3. three or more missed routine signals today (missed check-ins + meds + hydration + meals) -> `actionRequired`
+4. one or two missed routine signals -> `watch`
+5. unresolved safe-zone exit state -> at least `watch`
+6. otherwise -> `ok`
+
+`LocalDashboardRepository` aggregates these outputs into `DashboardSummary`
+for Home/Guardian views without mock counters.
+
+### G3 senior feature bundle data flow
+
+Group 3 uses the existing G2 event core as source of truth and adds real senior-facing flows:
+
+- **Check-in** (`LocalCheckInRepository`)
+  - derives today's check-in state
+  - reconciles missed morning window deterministically
+  - emits `CheckInCompletedEvent` / `CheckInMissedEvent`
+  - escalates `"I need help"` into incident+emergency events
+- **Medication** (`LocalMedicationRepository`)
+  - stores medication plans in Hive (`medication_plans`)
+  - derives reminder state from plans + persisted medication events
+  - emits `MedicationTakenEvent` / `MedicationMissedEvent`
+- **Incident/help** (`LocalIncidentRepository`)
+  - handles suspicious/confirmed/dismissed/emergency transitions
+  - emits `IncidentSuspectedEvent`, `IncidentConfirmedEvent`, `IncidentDismissedEvent`, `EmergencyTriggeredEvent`
+
+Senior screens under `features/senior`, `features/check_in`, `features/medication`, and `features/incident`
+consume these repositories through Riverpod providers. Guardian summary/timeline updates automatically via existing
+dashboard aggregation over persisted events.
+
+### G4 guardian feature bundle data flow
+
+Group 4 introduces full guardian-facing product flows without changing core source-of-truth rules:
+
+- persisted events (`EventRepository`) remain the canonical history
+- `SeniorStatusEngine` + `LocalDashboardRepository` remain canonical status/snapshot derivation
+- module repositories (`CheckInRepository`, `MedicationRepository`, `IncidentRepository`) remain canonical module state
+- guardian providers aggregate on top of those repositories (no parallel persistence model)
+
+Guardian routes and feature modules:
+
+- `/guardian` — dashboard
+- `/guardian/alerts` — alerts center
+- `/guardian/timeline` — event history with filtering
+- `/guardian/check-ins` — check-in monitoring
+- `/guardian/medication` — medication monitoring
+- `/guardian/incidents` — incident monitoring
+- `/guardian/profile` — senior overview
+
+#### Guardian alerts repository (local-first)
+
+`GuardianAlertRepository` (`LocalGuardianAlertRepository`) derives alerts from
+persisted events and stores only lightweight local alert state
+(`active`/`acknowledged`/`resolved`) in `SharedPreferences`.
+
+Deterministic derivation rules:
+
+1. unresolved confirmed incident -> critical active alert
+2. active emergency incident chain -> critical active alert
+3. unresolved suspected incident -> warning active alert
+4. missed medication today -> warning active alert (or critical when repeated misses escalate)
+5. missed check-in today -> warning active alert (or critical when repeated misses escalate)
+6. 3+ missed routine signals in a day (check-ins + medication + hydration + meals) -> critical active alert
+7. incident dismissal -> resolved informational item
+
+### G5 settings + wellbeing + safety expansion data flow
+
+Group 5 adds four new local-first modules without changing source-of-truth boundaries:
+
+- `SettingsRepository` (`LocalSettingsRepository`)
+  - persists profile-scoped settings in SharedPreferences
+  - senior settings key prefix: `senior_settings_<id>`
+  - guardian settings key prefix: `guardian_settings_<id>`
+- `HydrationRepository` (`LocalHydrationRepository`)
+  - fixed daily hydration slots
+  - completion/missed reconciliation with explicit grace windows
+  - emits `hydrationCompleted` and `hydrationMissed`
+- `NutritionRepository` (`LocalNutritionRepository`)
+  - breakfast/lunch/dinner slots
+  - completion/missed reconciliation
+  - emits `mealCompleted` and `mealMissed`
+- `SafeZoneRepository` (`LocalSafeZoneRepository`)
+  - Hive-backed safe-zone entities + runtime location state
+  - simulated/manual location updates only
+  - emits `safeZoneEntered` and `safeZoneExited`
+- `SummaryRepository` (`LocalSummaryRepository`)
+  - deterministic daily summary generation for senior and guardian audiences
+  - derives text from persisted timeline + `SeniorStatusEngine` (no AI)
+
+Guardian monitoring expansion in G5:
+
+- `/guardian/hydration`
+- `/guardian/nutrition`
+- `/guardian/location`
+- `/guardian/summary`
+
+Senior experience expansion in G5:
+
+- `/senior/hydration`
+- `/senior/nutrition`
+- `/senior/summary`
+
+`LocalGuardianAlertRepository` now also derives alerts from:
+
+- missed hydration slots
+- missed meals
+- unresolved safe-zone exit state (warning/critical by outside duration)
+
+#### Guardian timeline filtering
+
+`GuardianTimelineFilter` is a deterministic event-type mapping:
+
+- all
+- check-ins (`checkInCompleted`, `checkInMissed`)
+- medication (`medicationTaken`, `medicationMissed`)
+- wellbeing (`hydrationCompleted`, `hydrationMissed`, `mealCompleted`, `mealMissed`)
+- location (`safeZoneEntered`, `safeZoneExited`)
+- incidents (`incidentSuspected`, `incidentConfirmed`, `incidentDismissed`)
+- emergency (`emergencyTriggered`)
+
+### Demo data reset workflow
+
+Settings exposes developer actions for fast demo iteration:
+
+- **Clear Session**: removes local session and returns to onboarding.
+- **Reseed Demo Data**: clears and re-seeds deterministic profile/link data.
+- **Reset Demo Data**: clears structured data and seed marker, then clears session.
+
+### When NOT to use StorageService
+
+Do not store structured entities in SharedPreferences. Use Hive-backed local
+repositories instead.
+
+---
+
+## 8. Error handling and AppResult
+
+### AppResult
+
+`AppResult<T>` is a sealed class with two subtypes: `Success<T>` and `Failure<T>`.
+
+```dart
+// Producing
+AppResult<int> result = AppResult.success(42);
+AppResult<int> error  = AppResult.failure(ApiError(...));
+
+// Consuming — exhaustive
+final message = result.when(
+  success: (value) => 'Loaded $value items',
+  failure: (error) => error.userMessage,
+);
+
+// Consuming — nullable shortcut
+final value = result.getOrNull(); // int? — null on failure
+```
+
+Use `AppResult` as the return type of any repository method or service call
+that can fail in a domain-meaningful way.
+
+### AppException
+
+`AppException` is the structured exception type used throughout core services.
+It carries both a technical `message` (for logs) and a `userMessage` (safe to
+display in the UI).
+
+```dart
+throw AppException(
+  code: 'checkin-failed',
+  message: 'Storage write returned false for key check_in_2024_01_01',
+  userMessage: 'Could not save your check-in. Please try again.',
+);
+```
+
+### Global error handlers
+
+Three global error boundaries are wired in `main.dart`:
+
+| Handler | Catches |
+|---|---|
+| `FlutterError.onError` | Framework-level widget and rendering errors |
+| `PlatformDispatcher.instance.onError` | Platform channel errors |
+| `runZonedGuarded` | All other uncaught Dart exceptions and async errors |
+
+All three log to `AppLogger` and do not swallow the error.
+
+---
+
+## 9. Theme and design system
+
+### Accessing the theme
+
+```dart
+// Standard Material theme
+final textTheme = Theme.of(context).textTheme;
+final colorScheme = Theme.of(context).colorScheme;
+
+// Custom status colors extension
+final statusColors = Theme.of(context).extension<AppStatusColors>()!;
+Color okColor = statusColors.ok;
+Color watchColor = statusColors.watch;
+Color actionRequiredColor = statusColors.actionRequired;
+```
+
+### Typography scale
+
+| Style | Size | Weight | Use case |
+|---|---|---|---|
+| `displayLarge` | 32sp | w700 | Senior confirmation screens ("I'm okay") |
+| `headlineLarge` | 28sp | w700 | Hero headings |
+| `headlineSmall` | 20sp | w700 | Screen titles, section headings |
+| `titleLarge` | 18sp | w600 | Card headings |
+| `bodyLarge` | 18sp | w400 | Primary body text (senior-readable) |
+| `bodyMedium` | 16sp | w400 | Secondary body text |
+| `labelLarge` | 16sp | w600 | Button labels |
+
+All sizes are intentionally larger than Material defaults to meet the
+senior accessibility requirement of minimum 18sp body text.
+
+### Button variants
+
+| Button | Min height | Use case |
+|---|---|---|
+| `ElevatedButton` | 48px | Standard actions |
+| `FilledButton` | 56px, full-width | Senior primary actions ("I'm okay", "Confirm") |
+| `OutlinedButton` | 48px | Secondary and destructive actions |
+| `TextButton` | 44px | Inline links and tertiary actions |
+
+### Spacing and border radius
+
+```dart
+// Spacing
+AppSpacing.sm   //  8px
+AppSpacing.md   // 16px
+AppSpacing.lg   // 24px
+AppSpacing.xl   // 32px
+AppSpacing.xxl  // 48px — senior tap target height
+
+// Prebuilt gap widgets
+Gaps.v16        // vertical SizedBox(height: 16)
+Gaps.h8         // horizontal SizedBox(width: 8)
+
+// Border radius
+AppBorderRadius.mdAll  // BorderRadius.circular(12) — cards, inputs
+AppBorderRadius.lgAll  // BorderRadius.circular(16) — sheets, modals
+AppBorderRadius.pillAll // BorderRadius.circular(999) — chips, badges
+```
+
+---
+
+## 10. Routing
+
+Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
+`lib/app/router/app_router.dart` (GoRouter configuration).
+
+### Current routes
+
+| Constant | Path | Screen |
+|---|---|---|
+| `AppRoutes.splash` | `/splash` | `SplashScreen` |
+| `AppRoutes.onboardingRole` | `/onboarding/role` | `RoleSelectionScreen` |
+| `AppRoutes.onboardingProfile` | `/onboarding/profile/:role` | `ProfileSelectionScreen` |
+| `AppRoutes.home` | `/home` | `HomeScreen` (demo hub) |
+| `AppRoutes.seniorHome` | `/senior` | `SeniorHomeScreen` |
+| `AppRoutes.checkIn` | `/senior/check-in` | `CheckInScreen` |
+| `AppRoutes.medication` | `/senior/medication` | `MedicationScreen` |
+| `AppRoutes.incident` | `/senior/incident` | `IncidentConfirmationScreen` |
+| `AppRoutes.seniorHydration` | `/senior/hydration` | `HydrationScreen` |
+| `AppRoutes.seniorNutrition` | `/senior/nutrition` | `NutritionScreen` |
+| `AppRoutes.seniorSummary` | `/senior/summary` | `SeniorSummaryScreen` |
+| `AppRoutes.seniorCompanion` | `/senior/companion` | `SeniorCompanionScreen` |
+| `AppRoutes.guardianHome` | `/guardian` | `GuardianHomeScreen` |
+| `AppRoutes.guardianAlerts` | `/guardian/alerts` | `GuardianAlertsScreen` |
+| `AppRoutes.guardianTimeline` | `/guardian/timeline` | `GuardianTimelineScreen` |
+| `AppRoutes.guardianCheckIns` | `/guardian/check-ins` | `GuardianCheckInScreen` |
+| `AppRoutes.guardianMedication` | `/guardian/medication` | `GuardianMedicationScreen` |
+| `AppRoutes.guardianIncidents` | `/guardian/incidents` | `GuardianIncidentScreen` |
+| `AppRoutes.guardianProfile` | `/guardian/profile` | `GuardianProfileScreen` |
+| `AppRoutes.guardianHydration` | `/guardian/hydration` | `GuardianHydrationScreen` |
+| `AppRoutes.guardianNutrition` | `/guardian/nutrition` | `GuardianNutritionScreen` |
+| `AppRoutes.guardianLocation` | `/guardian/location` | `GuardianLocationScreen` |
+| `AppRoutes.guardianSummary` | `/guardian/summary` | `GuardianSummaryScreen` |
+| `AppRoutes.guardianInsights` | `/guardian/insights` | `GuardianInsightsScreen` |
+| `AppRoutes.settings` | `/settings` | `SettingsScreen` |
+
+### Splash routing logic
+
+The splash screen reads the active local session and routes accordingly:
+
+- Session exists with senior role → `/senior`
+- Session exists with guardian role → `/guardian`
+- No valid session/profile → `/onboarding/role`
+
+From onboarding:
+- Role selected at `/onboarding/role`
+- Demo profile selected at `/onboarding/profile/:role`
+- Session created locally and routed to role experience
+
+### Navigation
+
+```dart
+// Navigate and replace current route
+context.go(AppRoutes.seniorHome);
+
+// Push on top of the current route
+context.push(AppRoutes.settings);
+
+// Pop back
+context.pop();
+```
+
+---
+
+## 11. How to add a new feature module
+
+### Step 1 — Create the feature folder
+
+```
+lib/features/check_in/
+  check_in_screen.dart
+  check_in_providers.dart
+```
+
+### Step 2 — Add the route
+
+In `lib/app/router/app_routes.dart`:
+```dart
+static const checkIn = '/senior/check-in';
+```
+
+In `lib/app/router/app_router.dart`, add a `GoRoute` to the routes list:
+```dart
+GoRoute(
+  path: AppRoutes.checkIn,
+  name: 'check-in',
+  builder: (_, __) => const CheckInScreen(),
+),
+```
+
+### Step 3 — Create feature providers
+
+In `lib/features/check_in/check_in_providers.dart`:
+```dart
+final checkInSummaryProvider = FutureProvider.autoDispose((ref) {
+  final repo = ref.watch(checkInRepositoryProvider);
+  return repo.getTodaySummary('current-senior-id');
+});
+```
+
+### Step 4 — Use providers in your screen
+
+```dart
+class CheckInScreen extends ConsumerWidget {
+  const CheckInScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final summaryAsync = ref.watch(checkInSummaryProvider);
+    return summaryAsync.when(
+      loading: () => const CircularProgressIndicator(),
+      error: (e, _) => Text('Error: $e'),
+      data: (summary) => Text('Check-ins today: ${summary.count}'),
+    );
+  }
+}
+```
+
+### Step 5 — Publish domain events
+
+When the senior performs an action, publish the appropriate event:
+```dart
+ref.read(appEventBusProvider).publish(
+  CheckInCompletedEvent(seniorId: seniorId, happenedAt: DateTime.now()),
+);
+```
+
+---
+
+## 12. How to add a new repository
+
+### Step 1 — Define the interface
+
+```dart
+// lib/core/repositories/check_in_repository.dart
+abstract class CheckInRepository {
+  Future<int> getTodayCount(String seniorId);
+  Future<void> record(String seniorId);
+}
+```
+
+### Step 2 — Write the local implementation
+
+```dart
+// lib/core/repositories/local/local_check_in_repository.dart
+const _kMockDelay = Duration(milliseconds: 300);
+
+class LocalCheckInRepository implements CheckInRepository {
+  LocalCheckInRepository({required this.storage});
+  final StorageService storage;
+
+  @override
+  Future<int> getTodayCount(String seniorId) async {
+    await Future.delayed(_kMockDelay);
+    return storage.getInt('checkin_count_$seniorId') ?? 0;
+  }
+
+  @override
+  Future<void> record(String seniorId) async {
+    final current = storage.getInt('checkin_count_$seniorId') ?? 0;
+    await storage.setInt('checkin_count_$seniorId', current + 1);
+  }
+}
+```
+
+### Step 3 — Register the provider
+
+In `lib/app/bootstrap/providers.dart`:
+```dart
+final checkInRepositoryProvider = Provider<CheckInRepository>(
+  (ref) => LocalCheckInRepository(
+    storage: ref.watch(storageServiceProvider),
+  ),
+);
+```
+
+---
+
+## 13. Voice and assistant layer
+
+Group 7 adds a grounded AI layer that sits above existing repositories/events/status logic.
+
+### Source-of-truth rules
+
+- Deterministic repositories, status engine, alert derivation, and summary repositories remain factual truth.
+- AI/assistant output is an explanation/guidance layer and is never a source of truth.
+- No diagnosis, no invented incidents, no replacement of deterministic alert/status decisions.
+
+### Core architecture (`lib/core/voice`)
+
+| Component | Responsibility |
+|---|---|
+| `VoiceRecordingService` | Records microphone audio for senior companion requests. |
+| `VoiceGatewayClient` | Posts audio plus compact local context to `/voice` and stores the returned WAV response. |
+| `VoiceContextPayloadBuilder` | Converts local app context into a bounded payload for the gateway. |
+| `VoiceCompanionRepository` | Orchestrates senior audio request -> gateway -> playable response audio. |
+| `VoicePlaybackService` | Plays the returned audio response. |
+
+### Voice gateway mode and fallback behavior
+
+- `VOICE_GATEWAY_BASE_URL` controls the gateway URL and defaults to the current demo gateway.
+- `VOICE_GATEWAY_API_KEY` is optional and only for an app-level gateway key if the gateway enables one.
+- Sawti and model-provider credentials must stay server-side.
+- Senior companion enforces minimum capture quality checks before send (including a 3-second minimum recording gate).
+- Gateway failures are mapped to typed errors and user-safe messages; the app falls back to deterministic local text guidance.
+
+### UI surfaces (G7)
+
+- Senior companion route: `/senior/companion`
+- Guardian insights route: `/guardian/insights`
+
+The senior route records and plays voice through the gateway with deterministic
+local fallback. The guardian route provides conversational assistant responses
+grounded in local summaries, alerts, timeline, and status.
+
+---
+
+## 14. Known prototype limitations
+
+| Limitation | Location | Target milestone |
+|---|---|---|
+| `mock_dashboard_repository` keeps hardcoded fallback values (non-source of truth after G2) | `mock_dashboard_repository.dart` | Backlog cleanup |
+| No dark theme | `app_theme.dart` | G8 |
+| Senior voice roundtrip still depends on external gateway availability/quality | `core/voice/*` + `senior_companion_providers.dart` | Gateway-side hardening |
+| `AppSession.toJson/fromJson` remains manual (no codegen) | `app_session.dart` | G2+ |
+| Dio is configured but never used | `networking/` | Later API milestone |
+| Safe-zone location is simulation/manual only (no background tracking) | `local_safe_zone_repository.dart` + location screens | Future optional geo milestone |
+| Widget/bootstrap routing tests need expansion over time | `test/` | Iterative |
