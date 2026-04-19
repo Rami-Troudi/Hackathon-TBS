@@ -146,43 +146,49 @@ class GuardianHomeScreen extends ConsumerWidget {
                 onProfile: () => context.push(AppRoutes.guardianProfile),
               ),
               Gaps.v16,
-              MonitoringCard(
-                title: _tr(
-                  context,
-                  fr: 'Check-ins',
-                  en: 'Check-ins',
-                  ar: 'تأكيدات الحضور',
+              if (data.settings.showCheckInMonitoring) ...[
+                MonitoringCard(
+                  title: _tr(
+                    context,
+                    fr: 'Check-ins',
+                    en: 'Check-ins',
+                    ar: 'تأكيدات الحضور',
+                  ),
+                  subtitle: _checkInSubtitle(context, data.checkInState),
+                  icon: Icons.check_circle_outline,
+                  onTap: () => context.push(AppRoutes.guardianCheckIns),
                 ),
-                subtitle: _checkInSubtitle(context, data.checkInState),
-                icon: Icons.check_circle_outline,
-                onTap: () => context.push(AppRoutes.guardianCheckIns),
-              ),
-              Gaps.v8,
-              MonitoringCard(
-                title: _tr(
-                  context,
-                  fr: 'Médication',
-                  en: 'Medication',
-                  ar: 'الأدوية',
+                Gaps.v8,
+              ],
+              if (data.settings.showMedicationReminders) ...[
+                MonitoringCard(
+                  title: _tr(
+                    context,
+                    fr: 'Médication',
+                    en: 'Medication',
+                    ar: 'الأدوية',
+                  ),
+                  subtitle:
+                      '${_tr(context, fr: 'Pris', en: 'Taken', ar: 'تم') } ${data.todayMedicationTaken} • ${_tr(context, fr: 'Manqué', en: 'Missed', ar: 'فائت')} ${data.todayMedicationMissed} • ${_tr(context, fr: 'En attente', en: 'Pending', ar: 'معلّق')} ${data.todayMedicationPending}',
+                  icon: Icons.medication_outlined,
+                  onTap: () => context.push(AppRoutes.guardianMedication),
                 ),
-                subtitle:
-                    '${_tr(context, fr: 'Pris', en: 'Taken', ar: 'تم') } ${data.todayMedicationTaken} • ${_tr(context, fr: 'Manqué', en: 'Missed', ar: 'فائت')} ${data.todayMedicationMissed} • ${_tr(context, fr: 'En attente', en: 'Pending', ar: 'معلّق')} ${data.todayMedicationPending}',
-                icon: Icons.medication_outlined,
-                onTap: () => context.push(AppRoutes.guardianMedication),
-              ),
-              Gaps.v8,
-              MonitoringCard(
-                title: _tr(
-                  context,
-                  fr: 'Incidents',
-                  en: 'Incidents',
-                  ar: 'الحوادث',
+                Gaps.v8,
+              ],
+              if (data.settings.showIncidentMonitoring) ...[
+                MonitoringCard(
+                  title: _tr(
+                    context,
+                    fr: 'Incidents',
+                    en: 'Incidents',
+                    ar: 'الحوادث',
+                  ),
+                  subtitle:
+                      '${_tr(context, fr: 'Suspects ouverts', en: 'Open suspected', ar: 'مشتبه به مفتوح')} ${data.incidentState.openSuspectedIncidents} • ${_tr(context, fr: 'Confirmés ouverts', en: 'Open confirmed', ar: 'مؤكد مفتوح')} ${data.incidentState.openConfirmedIncidents} • ${_incidentLabel(context, data.incidentState.status)}',
+                  icon: Icons.report_gmailerrorred_outlined,
+                  onTap: () => context.push(AppRoutes.guardianIncidents),
                 ),
-                subtitle:
-                    '${_tr(context, fr: 'Suspects ouverts', en: 'Open suspected', ar: 'مشتبه به مفتوح')} ${data.incidentState.openSuspectedIncidents} • ${_tr(context, fr: 'Confirmés ouverts', en: 'Open confirmed', ar: 'مؤكد مفتوح')} ${data.incidentState.openConfirmedIncidents} • ${_incidentLabel(context, data.incidentState.status)}',
-                icon: Icons.report_gmailerrorred_outlined,
-                onTap: () => context.push(AppRoutes.guardianIncidents),
-              ),
+              ],
               if (data.settings.showHydrationReminders) ...[
                 Gaps.v8,
                 MonitoringCard(
@@ -242,24 +248,26 @@ class GuardianHomeScreen extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.guardianSummary),
                 ),
               ],
-              Gaps.v8,
-              MonitoringCard(
-                title: _tr(
-                  context,
-                  fr: 'Insights IA',
-                  en: 'AI insights',
-                  ar: 'رؤى الذكاء الاصطناعي',
+              if (data.settings.showInsightsModule) ...[
+                Gaps.v8,
+                MonitoringCard(
+                  title: _tr(
+                    context,
+                    fr: 'Insights IA',
+                    en: 'AI insights',
+                    ar: 'رؤى الذكاء الاصطناعي',
+                  ),
+                  subtitle: _tr(
+                    context,
+                    fr:
+                        'Questions/réponses ancrées et explications depuis les données locales',
+                    en: 'Grounded Q&A and smart explanations from local data',
+                    ar: 'أسئلة وأجوبة وتفسيرات مبنية على البيانات المحلية',
+                  ),
+                  icon: Icons.smart_toy_outlined,
+                  onTap: () => context.push(AppRoutes.guardianInsights),
                 ),
-                subtitle: _tr(
-                  context,
-                  fr:
-                      'Questions/réponses ancrées et explications depuis les données locales',
-                  en: 'Grounded Q&A and smart explanations from local data',
-                  ar: 'أسئلة وأجوبة وتفسيرات مبنية على البيانات المحلية',
-                ),
-                icon: Icons.smart_toy_outlined,
-                onTap: () => context.push(AppRoutes.guardianInsights),
-              ),
+              ],
               Gaps.v16,
               _TopAlertsCard(
                 alerts: data.topAlerts,

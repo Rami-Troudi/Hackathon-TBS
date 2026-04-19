@@ -79,8 +79,9 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
         '${data.incidentState.status.name}-${data.incidentState.openConfirmedIncidents}-${data.incidentState.openSuspectedIncidents}-${data.checkInState.status.name}-${reminder?.plan.id}-${reminder?.status.name}';
     if (_lastPromptToken == promptToken) return;
 
-    if (data.incidentState.status == IncidentFlowStatus.suspected ||
-        data.incidentState.status == IncidentFlowStatus.confirmed) {
+    if (data.settings.incidentModuleEnabled &&
+        (data.incidentState.status == IncidentFlowStatus.suspected ||
+            data.incidentState.status == IncidentFlowStatus.confirmed)) {
       _lastPromptToken = promptToken;
       final result = await showDialog<_IncidentPromptResult>(
         context: context,
@@ -119,7 +120,8 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
       return;
     }
 
-    if (data.checkInState.status != CheckInStatus.completed) {
+    if (data.settings.checkInModuleEnabled &&
+        data.checkInState.status != CheckInStatus.completed) {
       _lastPromptToken = promptToken;
       final yes = await _showSeniorPrompt(
         context,
@@ -152,7 +154,8 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
       return;
     }
 
-    if (reminder != null &&
+    if (data.settings.medicationModuleEnabled &&
+        reminder != null &&
         reminder.status == MedicationReminderStatus.pending) {
       _lastPromptToken = promptToken;
       final yes = await _showSeniorPrompt(
@@ -316,80 +319,87 @@ class _SeniorHomeContent extends ConsumerWidget {
         const SizedBox(height: AppSpacing.md),
         _StatusCard(summary: data.summary),
         const SizedBox(height: AppSpacing.md),
-        _PrimaryActionCard(
-          checkInState: data.checkInState,
-          onPrimaryAction: () async {
-            final created = await ref
-                .read(checkInRepositoryProvider)
-                .markCheckInCompleted(seniorId);
-            ref.invalidate(seniorHomeDataProvider);
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content:
-                    Text(
-                      created
-                          ? tr(
-                              context,
-                              fr: 'Check-in confirmé',
-                              en: 'Check-in completed',
-                              ar: 'تم تأكيد تسجيل الحضور',
-                            )
-                          : tr(
-                              context,
-                              fr: 'Déjà confirmé',
-                              en: 'Already completed',
-                              ar: 'تم التأكيد مسبقًا',
-                            ),
-                    ),
-              ),
-            );
-          },
-          onHelpAction: () async {
-            await ref.read(checkInRepositoryProvider).markNeedHelp(seniorId);
-            ref.invalidate(seniorHomeDataProvider);
-            if (!context.mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  tr(
-                    context,
-                    fr: 'Demande d’aide envoyée',
-                    en: 'Help request sent',
-                    ar: 'تم إرسال طلب المساعدة',
+        if (data.settings.checkInModuleEnabled ||
+            data.settings.companionModuleEnabled ||
+            data.settings.incidentModuleEnabled) ...[
+          _PrimaryActionCard(
+            checkInState: data.checkInState,
+            checkInEnabled: data.settings.checkInModuleEnabled,
+            incidentEnabled: data.settings.incidentModuleEnabled,
+            companionEnabled: data.settings.companionModuleEnabled,
+            onPrimaryAction: () async {
+              final created = await ref
+                  .read(checkInRepositoryProvider)
+                  .markCheckInCompleted(seniorId);
+              ref.invalidate(seniorHomeDataProvider);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    created
+                        ? tr(
+                            context,
+                            fr: 'Check-in confirmé',
+                            en: 'Check-in completed',
+                            ar: 'تم تأكيد تسجيل الحضور',
+                          )
+                        : tr(
+                            context,
+                            fr: 'Déjà confirmé',
+                            en: 'Already completed',
+                            ar: 'تم التأكيد مسبقًا',
+                          ),
                   ),
                 ),
-              ),
-            );
-          },
-          onCompanion: () => context.push(AppRoutes.seniorCompanion),
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _MedicationQuickCard(
-          reminder: data.nextReminder,
-          onTaken: data.nextReminder == null
-              ? null
-              : () async {
-                  await ref
-                      .read(medicationRepositoryProvider)
-                      .markMedicationTaken(
-                        seniorId,
-                        planId: data.nextReminder!.plan.id,
-                      );
-                  ref.invalidate(seniorHomeDataProvider);
-                },
-          onMissed: data.nextReminder == null
-              ? null
-              : () async {
-                  await ref
-                      .read(medicationRepositoryProvider)
-                      .markMedicationMissed(
-                        seniorId,
-                        planId: data.nextReminder!.plan.id,
-                      );
-                  ref.invalidate(seniorHomeDataProvider);
-                },
-        ),
+              );
+            },
+            onHelpAction: () async {
+              await ref.read(checkInRepositoryProvider).markNeedHelp(seniorId);
+              ref.invalidate(seniorHomeDataProvider);
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    tr(
+                      context,
+                      fr: 'Demande d’aide envoyée',
+                      en: 'Help request sent',
+                      ar: 'تم إرسال طلب المساعدة',
+                    ),
+                  ),
+                ),
+              );
+            },
+            onCompanion: () => context.push(AppRoutes.seniorCompanion),
+          ),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        if (data.settings.medicationModuleEnabled)
+          _MedicationQuickCard(
+            reminder: data.nextReminder,
+            onTaken: data.nextReminder == null
+                ? null
+                : () async {
+                    await ref
+                        .read(medicationRepositoryProvider)
+                        .markMedicationTaken(
+                          seniorId,
+                          planId: data.nextReminder!.plan.id,
+                        );
+                    ref.invalidate(seniorHomeDataProvider);
+                  },
+            onMissed: data.nextReminder == null
+                ? null
+                : () async {
+                    await ref
+                        .read(medicationRepositoryProvider)
+                        .markMedicationMissed(
+                          seniorId,
+                          planId: data.nextReminder!.plan.id,
+                        );
+                    ref.invalidate(seniorHomeDataProvider);
+                  },
+          ),
       ],
     );
   }
@@ -423,19 +433,32 @@ class _StatusCard extends StatelessWidget {
 class _PrimaryActionCard extends StatelessWidget {
   const _PrimaryActionCard({
     required this.checkInState,
+    required this.checkInEnabled,
+    required this.incidentEnabled,
+    required this.companionEnabled,
     required this.onPrimaryAction,
     required this.onHelpAction,
     required this.onCompanion,
   });
 
   final CheckInState checkInState;
+  final bool checkInEnabled;
+  final bool incidentEnabled;
+  final bool companionEnabled;
   final VoidCallback onPrimaryAction;
   final VoidCallback onHelpAction;
   final VoidCallback onCompanion;
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = switch (checkInState.status) {
+    final subtitle = !checkInEnabled
+        ? tr(
+            context,
+            fr: 'Choisissez une action ci-dessous.',
+            en: 'Choose an action below.',
+            ar: 'اختر إجراءً أدناه.',
+          )
+        : switch (checkInState.status) {
       CheckInStatus.completed => tr(
           context,
           fr: 'Vous avez déjà confirmé aujourd’hui.',
@@ -454,7 +477,7 @@ class _PrimaryActionCard extends StatelessWidget {
           en: 'Please confirm now.',
           ar: 'يرجى التأكيد الآن.',
         ),
-    };
+        };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -464,48 +487,55 @@ class _PrimaryActionCard extends StatelessWidget {
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         const SizedBox(height: AppSpacing.sm),
-        BigAction(
-          label: tr(context, fr: 'Je vais bien', en: 'I\'m okay', ar: 'أنا بخير'),
-          subtitle: tr(
-            context,
-            fr: 'Envoyer le check-in du jour',
-            en: 'Send today\'s check-in',
-            ar: 'أرسل تأكيد اليوم',
+        if (checkInEnabled) ...[
+          BigAction(
+            label:
+                tr(context, fr: 'Je vais bien', en: 'I\'m okay', ar: 'أنا بخير'),
+            subtitle: tr(
+              context,
+              fr: 'Envoyer le check-in du jour',
+              en: 'Send today\'s check-in',
+              ar: 'أرسل تأكيد اليوم',
+            ),
+            icon: Icons.favorite_outline,
+            onTap: onPrimaryAction,
           ),
-          icon: Icons.favorite_outline,
-          onTap: onPrimaryAction,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        BigAction(
-          label: tr(
-            context,
-            fr: 'J’ai besoin d’aide',
-            en: 'I need help',
-            ar: 'أحتاج مساعدة',
+          const SizedBox(height: AppSpacing.sm),
+          if (incidentEnabled)
+            BigAction(
+              label: tr(
+                context,
+                fr: 'J’ai besoin d’aide',
+                en: 'I need help',
+                ar: 'أحتاج مساعدة',
+              ),
+              subtitle: tr(
+                context,
+                fr: 'Alerter votre famille maintenant',
+                en: 'Alert your family now',
+                ar: 'نبه عائلتك الآن',
+              ),
+              icon: Icons.call_outlined,
+              tone: BigActionTone.destructive,
+              onTap: onHelpAction,
+            ),
+        ],
+        if (companionEnabled) ...[
+          const SizedBox(height: AppSpacing.sm),
+          BigAction(
+            label: tr(
+              context,
+              fr: 'Parler au Companion',
+              en: 'Talk to Companion',
+              ar: 'تحدث مع المرافق',
+            ),
+            subtitle:
+                tr(context, fr: 'Par voix', en: 'Ask by voice', ar: 'بالصوت'),
+            icon: Icons.mic_outlined,
+            tone: BigActionTone.soft,
+            onTap: onCompanion,
           ),
-          subtitle: tr(
-            context,
-            fr: 'Alerter votre famille maintenant',
-            en: 'Alert your family now',
-            ar: 'نبه عائلتك الآن',
-          ),
-          icon: Icons.call_outlined,
-          tone: BigActionTone.destructive,
-          onTap: onHelpAction,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        BigAction(
-          label: tr(
-            context,
-            fr: 'Parler au Companion',
-            en: 'Talk to Companion',
-            ar: 'تحدث مع المرافق',
-          ),
-          subtitle: tr(context, fr: 'Par voix', en: 'Ask by voice', ar: 'بالصوت'),
-          icon: Icons.mic_outlined,
-          tone: BigActionTone.soft,
-          onTap: onCompanion,
-        ),
+        ],
       ],
     );
   }

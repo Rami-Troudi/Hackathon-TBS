@@ -19,6 +19,10 @@ class SeniorSettingsPreferences {
     required this.languageCode,
     required this.emergencyContactLabel,
     required this.simplifiedModeEnabled,
+    required this.checkInModuleEnabled,
+    required this.medicationModuleEnabled,
+    required this.companionModuleEnabled,
+    required this.incidentModuleEnabled,
   });
 
   final bool largeTextEnabled;
@@ -28,6 +32,10 @@ class SeniorSettingsPreferences {
   final String languageCode;
   final String emergencyContactLabel;
   final bool simplifiedModeEnabled;
+  final bool checkInModuleEnabled;
+  final bool medicationModuleEnabled;
+  final bool companionModuleEnabled;
+  final bool incidentModuleEnabled;
 
   factory SeniorSettingsPreferences.defaults() =>
       const SeniorSettingsPreferences(
@@ -38,6 +46,10 @@ class SeniorSettingsPreferences {
         languageCode: 'fr',
         emergencyContactLabel: 'Family contact',
         simplifiedModeEnabled: false,
+        checkInModuleEnabled: true,
+        medicationModuleEnabled: true,
+        companionModuleEnabled: true,
+        incidentModuleEnabled: true,
       );
 
   SeniorSettingsPreferences copyWith({
@@ -48,6 +60,10 @@ class SeniorSettingsPreferences {
     String? languageCode,
     String? emergencyContactLabel,
     bool? simplifiedModeEnabled,
+    bool? checkInModuleEnabled,
+    bool? medicationModuleEnabled,
+    bool? companionModuleEnabled,
+    bool? incidentModuleEnabled,
   }) {
     return SeniorSettingsPreferences(
       largeTextEnabled: largeTextEnabled ?? this.largeTextEnabled,
@@ -59,6 +75,13 @@ class SeniorSettingsPreferences {
           emergencyContactLabel ?? this.emergencyContactLabel,
       simplifiedModeEnabled:
           simplifiedModeEnabled ?? this.simplifiedModeEnabled,
+      checkInModuleEnabled: checkInModuleEnabled ?? this.checkInModuleEnabled,
+      medicationModuleEnabled:
+          medicationModuleEnabled ?? this.medicationModuleEnabled,
+      companionModuleEnabled:
+          companionModuleEnabled ?? this.companionModuleEnabled,
+      incidentModuleEnabled:
+          incidentModuleEnabled ?? this.incidentModuleEnabled,
     );
   }
 
@@ -70,6 +93,10 @@ class SeniorSettingsPreferences {
         'languageCode': languageCode,
         'emergencyContactLabel': emergencyContactLabel,
         'simplifiedModeEnabled': simplifiedModeEnabled,
+        'checkInModuleEnabled': checkInModuleEnabled,
+        'medicationModuleEnabled': medicationModuleEnabled,
+        'companionModuleEnabled': companionModuleEnabled,
+        'incidentModuleEnabled': incidentModuleEnabled,
       };
 
   factory SeniorSettingsPreferences.fromJson(Map<String, dynamic> json) {
@@ -90,6 +117,14 @@ class SeniorSettingsPreferences {
           defaults.emergencyContactLabel,
       simplifiedModeEnabled: json['simplifiedModeEnabled'] as bool? ??
           defaults.simplifiedModeEnabled,
+      checkInModuleEnabled: json['checkInModuleEnabled'] as bool? ??
+          defaults.checkInModuleEnabled,
+      medicationModuleEnabled: json['medicationModuleEnabled'] as bool? ??
+          defaults.medicationModuleEnabled,
+      companionModuleEnabled: json['companionModuleEnabled'] as bool? ??
+          defaults.companionModuleEnabled,
+      incidentModuleEnabled: json['incidentModuleEnabled'] as bool? ??
+          defaults.incidentModuleEnabled,
     );
   }
 }
@@ -105,6 +140,9 @@ class GuardianSettingsPreferences {
     required this.showNutritionReminders,
     required this.showLocationUpdates,
     required this.linkedSeniorInfoVisible,
+    required this.showCheckInMonitoring,
+    required this.showIncidentMonitoring,
+    required this.showInsightsModule,
   });
 
   final bool notificationsEnabled;
@@ -116,6 +154,9 @@ class GuardianSettingsPreferences {
   final bool showNutritionReminders;
   final bool showLocationUpdates;
   final bool linkedSeniorInfoVisible;
+  final bool showCheckInMonitoring;
+  final bool showIncidentMonitoring;
+  final bool showInsightsModule;
 
   factory GuardianSettingsPreferences.defaults() =>
       const GuardianSettingsPreferences(
@@ -128,6 +169,9 @@ class GuardianSettingsPreferences {
         showNutritionReminders: true,
         showLocationUpdates: true,
         linkedSeniorInfoVisible: true,
+        showCheckInMonitoring: true,
+        showIncidentMonitoring: true,
+        showInsightsModule: true,
       );
 
   GuardianSettingsPreferences copyWith({
@@ -140,6 +184,9 @@ class GuardianSettingsPreferences {
     bool? showNutritionReminders,
     bool? showLocationUpdates,
     bool? linkedSeniorInfoVisible,
+    bool? showCheckInMonitoring,
+    bool? showIncidentMonitoring,
+    bool? showInsightsModule,
   }) {
     return GuardianSettingsPreferences(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -155,6 +202,11 @@ class GuardianSettingsPreferences {
       showLocationUpdates: showLocationUpdates ?? this.showLocationUpdates,
       linkedSeniorInfoVisible:
           linkedSeniorInfoVisible ?? this.linkedSeniorInfoVisible,
+      showCheckInMonitoring:
+          showCheckInMonitoring ?? this.showCheckInMonitoring,
+      showIncidentMonitoring:
+          showIncidentMonitoring ?? this.showIncidentMonitoring,
+      showInsightsModule: showInsightsModule ?? this.showInsightsModule,
     );
   }
 
@@ -168,6 +220,9 @@ class GuardianSettingsPreferences {
         'showNutritionReminders': showNutritionReminders,
         'showLocationUpdates': showLocationUpdates,
         'linkedSeniorInfoVisible': linkedSeniorInfoVisible,
+        'showCheckInMonitoring': showCheckInMonitoring,
+        'showIncidentMonitoring': showIncidentMonitoring,
+        'showInsightsModule': showInsightsModule,
       };
 
   factory GuardianSettingsPreferences.fromJson(Map<String, dynamic> json) {
@@ -193,6 +248,12 @@ class GuardianSettingsPreferences {
           json['showLocationUpdates'] as bool? ?? defaults.showLocationUpdates,
       linkedSeniorInfoVisible: json['linkedSeniorInfoVisible'] as bool? ??
           defaults.linkedSeniorInfoVisible,
+      showCheckInMonitoring: json['showCheckInMonitoring'] as bool? ??
+          defaults.showCheckInMonitoring,
+      showIncidentMonitoring: json['showIncidentMonitoring'] as bool? ??
+          defaults.showIncidentMonitoring,
+      showInsightsModule: json['showInsightsModule'] as bool? ??
+          defaults.showInsightsModule,
     );
   }
 }

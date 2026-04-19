@@ -19,6 +19,7 @@ class FallDetectionService {
 
   StreamSubscription<AccelerometerEvent>? _subscription;
   DateTime? _lastTriggerAt;
+  DateTime? _lastFreeFallAt;
 
   bool get isRunning => _subscription != null;
 
@@ -31,21 +32,38 @@ class FallDetectionService {
   Future<void> _onAcceleration(AccelerometerEvent event) async {
     final magnitude =
         sqrt(event.x * event.x + event.y * event.y + event.z * event.z);
-    const triggerThreshold = 25.0;
-    if (magnitude < triggerThreshold) return;
-
     final now = DateTime.now();
+
+    // Require a fall-like sequence instead of a single spike:
+    // 1) free-fall / near-weightless movement
+    // 2) impact shortly after.
+    const freeFallThreshold = 4.0;
+    const impactThreshold = 28.0;
+    const impactWindow = Duration(milliseconds: 1400);
+
+    if (magnitude <= freeFallThreshold) {
+      _lastFreeFallAt = now;
+      return;
+    }
+
+    final freeFallAt = _lastFreeFallAt;
+    if (freeFallAt == null || now.difference(freeFallAt) > impactWindow) {
+      return;
+    }
+    if (magnitude < impactThreshold) return;
+
     if (_lastTriggerAt != null &&
         now.difference(_lastTriggerAt!) < const Duration(seconds: 30)) {
       return;
     }
     _lastTriggerAt = now;
+    _lastFreeFallAt = null;
 
     final seniorId = await activeSeniorResolver.resolveActiveSeniorId();
     if (seniorId == null) return;
 
     logger.warn(
-      'Fall-like acceleration detected for $seniorId (magnitude=$magnitude)',
+      'Fall-like sequence detected for $seniorId (impactMagnitude=$magnitude)',
     );
     await incidentRepository.reportSuspiciousIncident(
       seniorId,

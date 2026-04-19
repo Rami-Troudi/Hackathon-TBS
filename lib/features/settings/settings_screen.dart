@@ -336,6 +336,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onChanged: (value) =>
               _saveSenior(settings.copyWith(simplifiedModeEnabled: value)),
         ),
+        SwitchListTile(
+          value: settings.checkInModuleEnabled,
+          title: const Text('Enable check-in module'),
+          onChanged: (value) =>
+              _saveSenior(settings.copyWith(checkInModuleEnabled: value)),
+        ),
+        SwitchListTile(
+          value: settings.medicationModuleEnabled,
+          title: const Text('Enable medication module'),
+          onChanged: (value) =>
+              _saveSenior(settings.copyWith(medicationModuleEnabled: value)),
+        ),
+        SwitchListTile(
+          value: settings.companionModuleEnabled,
+          title: const Text('Enable AI companion module'),
+          onChanged: (value) =>
+              _saveSenior(settings.copyWith(companionModuleEnabled: value)),
+        ),
+        SwitchListTile(
+          value: settings.incidentModuleEnabled,
+          title: const Text('Enable incident/help module'),
+          onChanged: (value) =>
+              _saveSenior(settings.copyWith(incidentModuleEnabled: value)),
+        ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: const Text('Reminder intensity'),
@@ -428,10 +452,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               _saveGuardian(settings.copyWith(weeklyDigestEnabled: value)),
         ),
         SwitchListTile(
+          value: settings.showCheckInMonitoring,
+          title: const Text('Show check-in monitoring'),
+          onChanged: (value) =>
+              _saveGuardian(settings.copyWith(showCheckInMonitoring: value)),
+        ),
+        SwitchListTile(
           value: settings.showMedicationReminders,
           title: const Text('Show medication monitoring'),
           onChanged: (value) =>
               _saveGuardian(settings.copyWith(showMedicationReminders: value)),
+        ),
+        SwitchListTile(
+          value: settings.showIncidentMonitoring,
+          title: const Text('Show incident monitoring'),
+          onChanged: (value) =>
+              _saveGuardian(settings.copyWith(showIncidentMonitoring: value)),
         ),
         SwitchListTile(
           value: settings.showHydrationReminders,
@@ -456,6 +492,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           title: const Text('Show linked senior info'),
           onChanged: (value) =>
               _saveGuardian(settings.copyWith(linkedSeniorInfoVisible: value)),
+        ),
+        SwitchListTile(
+          value: settings.showInsightsModule,
+          title: const Text('Show AI insights module'),
+          onChanged: (value) =>
+              _saveGuardian(settings.copyWith(showInsightsModule: value)),
         ),
       ];
     }
