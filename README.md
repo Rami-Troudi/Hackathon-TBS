@@ -1,6 +1,6 @@
 # Senior Companion — Final Prototype (G0→G8)
 
-This repository contains the final hackathon prototype through **G8**: a runnable local-first Flutter app with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, senior voice companion integration, notification wiring, native permission configuration, and final demo documentation.
+This repository contains the final hackathon prototype through **G8**: a runnable local-first Flutter app with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, senior voice companion integration, guardian assistant insights, notification wiring, native permission configuration, and final demo documentation.
 
 ## Scope of this prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7 + G8)
 
@@ -47,9 +47,10 @@ Included:
   - expanded guardian alert rules for hydration/nutrition misses and unresolved safe-zone exits
 - Voice companion integration:
   - senior voice companion screen (`/senior/companion`) with microphone-first access
+  - guardian assistant screen (`/guardian/insights`) with grounded local Q&A
   - voice gateway client in `core/voice` sends recorded audio plus compact local context
   - target gateway pipeline: Tunisian Arabic STT (`linagora/linto-asr-ar-tn-0.1`) -> local LLM -> Sawti TTS WAV response
-  - guardian insights route remains a deterministic handoff screen until a guardian/text endpoint exists
+  - when voice gateway calls fail, senior companion falls back to deterministic local text guidance
   - deterministic repositories remain source of truth; the voice service only receives grounded context for the current question
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
@@ -237,18 +238,21 @@ Group 5 extends the product into a fuller daily companion, while staying local-f
   - `/guardian/location`
   - `/guardian/summary`
 
-## Voice Companion
+## Voice & Assistant layer
 
-The senior voice companion is the only AI surface in the Flutter app:
+AI/assistant surfaces in the Flutter app:
 
 - **Senior Companion** (`/senior/companion`)
   - records senior speech and sends it to the configured voice gateway
+  - requires a minimum 3-second recording before send
+  - uses deterministic local text fallback guidance on gateway failure
   - gateway performs STT, LLM reasoning, and TTS outside the Flutter app
 - **Guardian Insights** (`/guardian/insights`)
-  - no chat/AI in this build; links guardians to alerts, timeline, and deterministic summaries
+  - conversational assistant grounded in local summaries, alerts, timeline, and status
+  - keeps deterministic local fallback guidance for robust demo behavior
 - **Grounding policy**
   - repositories, status engine, alerts, and deterministic summaries remain factual source of truth
-  - the app sends compact context with each voice request
+  - the app sends compact context with each voice request and uses local context for guardian responses
   - no diagnosis, no invented incidents, and no AI-owned alert/status decisions
 
 ### Companion routes

@@ -24,7 +24,7 @@ Current deployment model remains **mobile-only and local-first**:
 10. [Routing](#10-routing)
 11. [How to add a new feature module](#11-how-to-add-a-new-feature-module)
 12. [How to add a new repository](#12-how-to-add-a-new-repository)
-13. [Voice companion layer](#13-voice-companion-layer)
+13. [Voice and assistant layer](#13-voice-and-assistant-layer)
 14. [Known prototype limitations](#14-known-prototype-limitations)
 
 ---
@@ -63,7 +63,7 @@ imports from features.
 |---|---|
 | `connectivity/` | Connectivity mode service (`online/degraded/offline`) for degraded-state UX scaffolding |
 | `config/` | Environment-aware app configuration |
-| `ai/` | Local context builder used to ground senior voice requests |
+| `ai/` | Local context + prompt/fallback/explanation services for senior and guardian assistant surfaces |
 | `errors/` | `AppException` + `AppErrorMapper` |
 | `events/` | Sealed `AppEvent` hierarchy, `AppEventBus`, persisted event mapping, status engine |
 | `logging/` | `AppLogger` abstraction + `DebugAppLogger` |
@@ -72,7 +72,7 @@ imports from features.
 | `permissions/` | `PermissionService` abstraction + implementation |
 | `repositories/` | Repository interfaces + `local/` implementations |
 | `storage/` | SharedPreferences storage + Hive structured storage bootstrap |
-| `voice/` | Senior voice gateway client, recorder/playback services, and voice companion repository |
+| `voice/` | Voice gateway client, recorder/playback services, and senior voice companion repository |
 
 ### `lib/features`
 
@@ -875,14 +875,14 @@ final checkInRepositoryProvider = Provider<CheckInRepository>(
 
 ---
 
-## 13. Voice companion layer
+## 13. Voice and assistant layer
 
 Group 7 adds a grounded AI layer that sits above existing repositories/events/status logic.
 
 ### Source-of-truth rules
 
 - Deterministic repositories, status engine, alert derivation, and summary repositories remain factual truth.
-- AI is limited to the senior voice gateway path and is not a source of truth.
+- AI/assistant output is an explanation/guidance layer and is never a source of truth.
 - No diagnosis, no invented incidents, no replacement of deterministic alert/status decisions.
 
 ### Core architecture (`lib/core/voice`)
@@ -895,20 +895,22 @@ Group 7 adds a grounded AI layer that sits above existing repositories/events/st
 | `VoiceCompanionRepository` | Orchestrates senior audio request -> gateway -> playable response audio. |
 | `VoicePlaybackService` | Plays the returned audio response. |
 
-### Voice gateway mode
+### Voice gateway mode and fallback behavior
 
 - `VOICE_GATEWAY_BASE_URL` controls the gateway URL and defaults to the current demo gateway.
 - `VOICE_GATEWAY_API_KEY` is optional and only for an app-level gateway key if the gateway enables one.
 - Sawti and model-provider credentials must stay server-side.
-- Guardian insights do not call AI in this build; guardians use deterministic alerts, timeline, and summaries.
+- Senior companion enforces minimum capture quality checks before send (including a 3-second minimum recording gate).
+- Gateway failures are mapped to typed errors and user-safe messages; the app falls back to deterministic local text guidance.
 
 ### UI surfaces (G7)
 
 - Senior companion route: `/senior/companion`
 - Guardian insights route: `/guardian/insights`
 
-The senior route records and plays voice. The guardian route is a handoff screen
-to deterministic local views until a compatible guardian/text gateway exists.
+The senior route records and plays voice through the gateway with deterministic
+local fallback. The guardian route provides conversational assistant responses
+grounded in local summaries, alerts, timeline, and status.
 
 ---
 
@@ -918,7 +920,7 @@ to deterministic local views until a compatible guardian/text gateway exists.
 |---|---|---|
 | `mock_dashboard_repository` keeps hardcoded fallback values (non-source of truth after G2) | `mock_dashboard_repository.dart` | Backlog cleanup |
 | No dark theme | `app_theme.dart` | G8 |
-| Guardian AI/text insights are not active until the gateway exposes a compatible endpoint | `guardian_insights_screen.dart` | Future AI milestone |
+| Senior voice roundtrip still depends on external gateway availability/quality | `core/voice/*` + `senior_companion_providers.dart` | Gateway-side hardening |
 | `AppSession.toJson/fromJson` remains manual (no codegen) | `app_session.dart` | G2+ |
 | Dio is configured but never used | `networking/` | Later API milestone |
 | Safe-zone location is simulation/manual only (no background tracking) | `local_safe_zone_repository.dart` + location screens | Future optional geo milestone |

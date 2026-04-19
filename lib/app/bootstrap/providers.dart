@@ -311,8 +311,7 @@ final voiceCompanionRepositoryProvider = Provider<VoiceCompanionRepository>(
   ),
 );
 
-final voiceRecordingServiceProvider =
-    Provider.autoDispose<VoiceRecordingService>(
+final voiceRecordingServiceProvider = Provider<VoiceRecordingService>(
   (ref) {
     final service = RecordVoiceRecordingService();
     ref.onDispose(service.dispose);
@@ -320,7 +319,7 @@ final voiceRecordingServiceProvider =
   },
 );
 
-final voicePlaybackServiceProvider = Provider.autoDispose<VoicePlaybackService>(
+final voicePlaybackServiceProvider = Provider<VoicePlaybackService>(
   (ref) {
     final service = JustAudioVoicePlaybackService();
     ref.onDispose(service.dispose);

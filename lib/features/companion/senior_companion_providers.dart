@@ -1,6 +1,12 @@
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
+import 'package:senior_companion/core/voice/voice_companion_repository.dart';
 import 'package:senior_companion/core/voice/voice_interaction.dart';
+import 'package:senior_companion/core/voice/voice_gateway_client.dart';
+import 'package:senior_companion/core/voice/voice_playback_service.dart';
+import 'package:senior_companion/core/voice/voice_recording_service.dart';
 
 class SeniorCompanionState {
   const SeniorCompanionState({
@@ -54,6 +60,19 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
         );
 
   final Ref ref;
+  DateTime? _listeningStartedAt;
+  String? _activeRecordingPath;
+
+  static const Duration _minRecordingDuration = Duration(seconds: 3);
+  static const int _wavHeaderBytes = 44;
+  static const int _pcm16Mono16kBytesPerSecond = 32000;
+  static const int _minRecordingBytes = _pcm16Mono16kBytesPerSecond * 3;
+
+  VoiceRecordingService get _recorder =>
+      ref.read(voiceRecordingServiceProvider);
+  VoicePlaybackService get _playback => ref.read(voicePlaybackServiceProvider);
+  VoiceCompanionRepository get _voiceRepository =>
+      ref.read(voiceCompanionRepositoryProvider);
 
   Future<void> startListening() async {
     if (state.isBusy) return;
@@ -65,8 +84,7 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
       return;
     }
 
-    final recorder = ref.read(voiceRecordingServiceProvider);
-    final hasPermission = await recorder.hasPermission();
+    final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) {
       state = state.copyWith(
         status: VoiceInteractionStatus.error,
@@ -76,7 +94,9 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
     }
 
     try {
-      final path = await recorder.start();
+      final path = await _recorder.start();
+      _activeRecordingPath = path;
+      _listeningStartedAt = DateTime.now();
       state = state.copyWith(
         status: VoiceInteractionStatus.listening,
         lastRequestPath: path,
@@ -92,37 +112,48 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
 
   Future<void> stopAndSend() async {
     if (state.status != VoiceInteractionStatus.listening) return;
-    final recorder = ref.read(voiceRecordingServiceProvider);
     state = state.copyWith(status: VoiceInteractionStatus.processing);
 
     try {
-      final audioPath = await recorder.stop();
+      final stoppedPath = await _recorder.stop();
+      final audioPath = stoppedPath ?? _activeRecordingPath;
+      _activeRecordingPath = null;
       if (audioPath == null || audioPath.isEmpty) {
-        state = state.copyWith(
-          status: VoiceInteractionStatus.error,
-          errorMessage: 'No recorded audio was captured.',
-        );
+        await _setErrorWithFallback('No recorded audio was captured.');
         return;
       }
 
-      final result = await ref
-          .read(voiceCompanionRepositoryProvider)
-          .askSeniorWithAudio(audioPath);
+      final validationError = await _validateCapture(audioPath);
+      _listeningStartedAt = null;
+      if (validationError != null) {
+        await _setErrorWithFallback(validationError);
+        return;
+      }
+
+      final result = await _voiceRepository.askSeniorWithAudio(audioPath);
+      if (!mounted) return;
       state = state.copyWith(
         status: VoiceInteractionStatus.playing,
         lastRequestPath: audioPath,
         lastResponsePath: result.responseAudioPath,
         clearError: true,
       );
-      await ref
-          .read(voicePlaybackServiceProvider)
-          .playFile(result.responseAudioPath);
+      await _playback.playFile(result.responseAudioPath);
+      if (!mounted) return;
       state = state.copyWith(status: VoiceInteractionStatus.idle);
     } catch (error) {
-      state = state.copyWith(
-        status: VoiceInteractionStatus.error,
-        errorMessage: 'Voice companion failed: $error',
-      );
+      _listeningStartedAt = null;
+      if (error is VoiceGatewayException) {
+        final guidance = await _buildLocalFallbackGuidance();
+        if (!mounted) return;
+        state = state.copyWith(
+          status: VoiceInteractionStatus.error,
+          errorMessage: '${_gatewayErrorMessage(error)}\n$guidance',
+        );
+        return;
+      }
+
+      await _setErrorWithFallback('Voice companion failed: $error');
     }
   }
 
@@ -132,7 +163,7 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
 
     try {
       state = state.copyWith(status: VoiceInteractionStatus.playing);
-      await ref.read(voicePlaybackServiceProvider).playFile(path);
+      await _playback.playFile(path);
       state = state.copyWith(status: VoiceInteractionStatus.idle);
     } catch (error) {
       state = state.copyWith(
@@ -143,17 +174,93 @@ class SeniorCompanionController extends StateNotifier<SeniorCompanionState> {
   }
 
   Future<void> cancel() async {
-    final recorder = ref.read(voiceRecordingServiceProvider);
-    final playback = ref.read(voicePlaybackServiceProvider);
-    if (await recorder.isRecording()) {
-      await recorder.stop();
+    if (await _recorder.isRecording()) {
+      await _recorder.stop();
     }
-    await playback.stop();
+    _activeRecordingPath = null;
+    _listeningStartedAt = null;
+    await _playback.stop();
     state = state.copyWith(status: VoiceInteractionStatus.idle);
+  }
+
+  Future<String?> _validateCapture(String audioPath) async {
+    final file = File(audioPath);
+    if (!await file.exists()) {
+      return 'The recording could not be found. Please try again.';
+    }
+
+    final length = await file.length();
+    if (length <= _wavHeaderBytes) {
+      return 'No voice was captured. Please hold the button and speak clearly.';
+    }
+
+    final payloadBytes = length - _wavHeaderBytes;
+    final fileDuration = Duration(
+      milliseconds:
+          ((payloadBytes / _pcm16Mono16kBytesPerSecond) * 1000).round(),
+    );
+    final elapsed = _listeningStartedAt == null
+        ? Duration.zero
+        : DateTime.now().difference(_listeningStartedAt!);
+    final effectiveDuration = elapsed > fileDuration ? elapsed : fileDuration;
+
+    if (effectiveDuration < _minRecordingDuration ||
+        length < _minRecordingBytes) {
+      return 'Recording too short. Please speak for at least 3 seconds before sending.';
+    }
+
+    return null;
+  }
+
+  Future<void> _setErrorWithFallback(String baseMessage) async {
+    final guidance = await _buildLocalFallbackGuidance();
+    if (!mounted) return;
+    state = state.copyWith(
+      status: VoiceInteractionStatus.error,
+      errorMessage: '$baseMessage\n$guidance',
+    );
+  }
+
+  Future<String> _buildLocalFallbackGuidance() async {
+    try {
+      final context =
+          await ref.read(aiContextBuilderProvider).buildSeniorContext();
+      final actions = <String>[];
+      if (context.activeAlerts.isNotEmpty) {
+        actions.add('Check active alerts from the guardian dashboard.');
+      }
+      final nextReminder = context.nextReminder;
+      if (nextReminder != null) {
+        actions.add('Next medication reminder: ${nextReminder.slotLabel}.');
+      }
+      if (actions.isEmpty) {
+        actions.add('Open Daily Summary to review today\'s guidance.');
+      }
+      return 'Local guidance: ${context.summary.headline} ${actions.join(' ')}';
+    } catch (_) {
+      return 'Local guidance: Open Daily Summary and Alerts for deterministic status details.';
+    }
+  }
+
+  String _gatewayErrorMessage(VoiceGatewayException error) {
+    final detail = (error.detail ?? '').trim();
+    return switch (error.kind) {
+      VoiceGatewayErrorKind.badRequest => detail.isEmpty
+          ? 'Voice request was rejected.'
+          : 'Voice request was rejected: $detail',
+      VoiceGatewayErrorKind.timeout => 'Voice service timed out.',
+      VoiceGatewayErrorKind.network => 'Could not reach the voice service.',
+      VoiceGatewayErrorKind.unauthorized =>
+        'Voice service authorization failed.',
+      VoiceGatewayErrorKind.server => 'Voice service is currently unavailable.',
+      VoiceGatewayErrorKind.invalidResponse =>
+        'Voice service returned an invalid response.',
+      VoiceGatewayErrorKind.unknown => 'Voice service request failed.',
+    };
   }
 }
 
-final seniorCompanionControllerProvider = StateNotifierProvider.autoDispose<
-    SeniorCompanionController, SeniorCompanionState>(
+final seniorCompanionControllerProvider =
+    StateNotifierProvider<SeniorCompanionController, SeniorCompanionState>(
   (ref) => SeniorCompanionController(ref: ref),
 );

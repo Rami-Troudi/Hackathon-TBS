@@ -136,7 +136,7 @@ After onboarding with a senior profile:
 
 ---
 
-## Guardian feature flow (G4 + G5 expansion + deterministic insights handoff)
+## Guardian feature flow (G4 + G5 expansion + assistant insights)
 
 After onboarding with a guardian profile:
 
@@ -158,6 +158,7 @@ After onboarding with a guardian profile:
    - `LocalDashboardRepository` status summary
    - check-in/medication/incident repositories for module snapshots
 4. Alert acknowledge/resolve state is stored locally (prototype-only UI state)
+5. `/guardian/insights` provides conversational local Q&A grounded in current alerts, summaries, timeline, and status
 
 For repeated demos, use **Settings** actions:
 - Clear Session
@@ -225,7 +226,9 @@ Current targeted tests (G2 + G3 + G4 + G5 + G7 + G8):
 - `test/features/hydration/hydration_screen_test.dart` (senior hydration action wiring)
 - `test/features/hydration/guardian_hydration_screen_test.dart` (guardian hydration monitoring UI)
 - `test/core/ai/ai_context_builder_test.dart` (local context assembly for voice grounding)
-- `test/features/companion/senior_companion_providers_test.dart` (senior voice companion recording/send/playback flow)
+- `test/features/companion/senior_companion_providers_test.dart` (senior voice companion recording/send/playback flow, 3-second minimum capture gate, fallback guidance)
+- `test/features/companion/guardian_insights_providers_test.dart` (guardian assistant initialization + grounded fallback behavior)
+- `test/core/voice/voice_gateway_client_test.dart` (typed 4xx/5xx gateway error mapping)
 - `test/core/notifications/app_event_notification_dispatcher_test.dart` (event-to-notification policy)
 
 ---
@@ -282,7 +285,7 @@ fvm flutter clean && fvm flutter pub get
   for diagnostics and manual scenario setup.
 - **G5 wellbeing + safety modules.** Hydration, nutrition, safe-zone location, and daily summaries are deterministic and local-first only.
   No backend/cloud auth/data layer is introduced in G5.
-- **Voice companion grounding.** Senior voice requests include compact local context from repositories/status/alerts/summaries. No diagnosis, no invented events, and no AI-owned alert/status decisions.
+- **Voice/assistant grounding.** Senior voice requests include compact local context from repositories/status/alerts/summaries. Guardian insights answers are grounded in local summaries/alerts/timeline/status. No diagnosis, no invented events, and no AI-owned alert/status decisions.
 - **G8 notification wiring.** Product notifications are triggered centrally from persisted events through `AppEventRecorder` + `AppEventNotificationDispatcher`. Widgets do not own alert notification policy.
 
 ---
@@ -390,8 +393,10 @@ the generated local APK for hackathon testing and video capture.
 - Location permission is only needed for the safe-zone prototype flow. The app
   does not implement background geofencing.
 - The senior voice companion requires network access to the configured voice
-  gateway. Guardian insights are intentionally deterministic links to alerts,
-  timeline, and summaries until a compatible guardian/text endpoint exists.
+  gateway. If gateway calls fail, the companion falls back to deterministic
+  local text guidance.
+- Guardian insights are available without network and stay grounded in local
+  summaries, alerts, timeline, and status.
 - Before recording, run **Settings → Reset demo data**, complete onboarding, and
   then use either senior flows or Developer Hub event buttons to prepare the
   scenario.

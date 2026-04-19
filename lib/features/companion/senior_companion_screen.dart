@@ -106,7 +106,7 @@ class SeniorCompanionScreen extends ConsumerWidget {
   String _descriptionFor(VoiceInteractionStatus status) {
     return switch (status) {
       VoiceInteractionStatus.idle =>
-        'Tap the microphone, ask your question, then send it.',
+        'Tap the microphone, speak for at least 3 seconds, then send it.',
       VoiceInteractionStatus.listening =>
         'Speak clearly. Tap stop when you are done.',
       VoiceInteractionStatus.processing =>
