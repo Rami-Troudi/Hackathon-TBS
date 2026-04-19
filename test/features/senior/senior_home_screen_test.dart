@@ -5,11 +5,13 @@ import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/core/repositories/check_in_repository.dart';
+import 'package:senior_companion/core/repositories/incident_repository.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/features/senior/senior_home_screen.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
 import 'package:senior_companion/shared/models/hydration_state.dart';
+import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/models/meal_state.dart';
 import 'package:senior_companion/shared/models/medication_plan.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
@@ -95,7 +97,6 @@ SeniorHomeData _buildSeniorHomeData({
 
 class _FakeCheckInRepository implements CheckInRepository {
   bool markCompletedCalled = false;
-  bool markNeedHelpCalled = false;
 
   @override
   Future<List<PersistedEventRecord>> fetchRecentCheckIns(
@@ -126,9 +127,41 @@ class _FakeCheckInRepository implements CheckInRepository {
   Future<void> markNeedHelp(
     String seniorId, {
     DateTime? now,
-  }) async {
-    markNeedHelpCalled = true;
+  }) async {}
+}
+
+class _FakeIncidentRepository implements IncidentRepository {
+  bool requestImmediateHelpCalled = false;
+
+  @override
+  Future<void> confirmIncident(String seniorId, {DateTime? now}) async {}
+
+  @override
+  Future<void> dismissIncident(String seniorId, {DateTime? now}) async {}
+
+  @override
+  Future<IncidentFlowState> getCurrentState(String seniorId) async {
+    return const IncidentFlowState(
+      status: IncidentFlowStatus.clear,
+      openSuspectedIncidents: 0,
+      openConfirmedIncidents: 0,
+    );
   }
+
+  @override
+  Future<void> reportSuspiciousIncident(
+    String seniorId, {
+    DateTime? now,
+    double confidenceScore = 0.75,
+  }) async {}
+
+  @override
+  Future<void> requestImmediateHelp(String seniorId, {DateTime? now}) async {
+    requestImmediateHelpCalled = true;
+  }
+
+  @override
+  Future<void> triggerEmergency(String seniorId, {DateTime? now}) async {}
 }
 
 void main() {
@@ -204,6 +237,7 @@ void main() {
   testWidgets('senior home quick actions trigger check-in repository actions',
       (tester) async {
     final repository = _FakeCheckInRepository();
+    final incidentRepository = _FakeIncidentRepository();
 
     await tester.pumpWidget(
       ProviderScope(
@@ -215,6 +249,7 @@ void main() {
             (ref) => Stream.value(AppConnectivityState.online),
           ),
           checkInRepositoryProvider.overrideWithValue(repository),
+          incidentRepositoryProvider.overrideWithValue(incidentRepository),
         ],
         child: const MaterialApp(home: SeniorHomeScreen()),
       ),
@@ -228,6 +263,6 @@ void main() {
 
     await tester.tap(find.text('I need help'));
     await tester.pumpAndSettle();
-    expect(repository.markNeedHelpCalled, isTrue);
+    expect(incidentRepository.requestImmediateHelpCalled, isTrue);
   });
 }

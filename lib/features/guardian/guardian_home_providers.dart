@@ -214,10 +214,15 @@ final guardianHomeDataProvider =
 });
 
 bool _isImportantType(AppEventType type) => switch (type) {
+  AppEventType.checkInCompleted ||
       AppEventType.checkInMissed ||
+  AppEventType.medicationTaken ||
       AppEventType.medicationMissed ||
+  AppEventType.hydrationCompleted ||
       AppEventType.hydrationMissed ||
+  AppEventType.mealCompleted ||
       AppEventType.mealMissed ||
+  AppEventType.safeZoneEntered ||
       AppEventType.safeZoneExited ||
       AppEventType.incidentSuspected ||
       AppEventType.incidentConfirmed ||

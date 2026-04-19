@@ -65,6 +65,11 @@ class AppEventNotificationDispatcher {
     String source,
   ) {
     return switch (event) {
+      CheckInCompletedEvent() => const AppEventNotification(
+          level: NotificationLevel.info,
+          title: 'Senior check-in confirmed',
+          body: 'The senior reported they are okay.',
+        ),
       CheckInMissedEvent(:final windowLabel) => AppEventNotification(
           level: NotificationLevel.warning,
           title: 'Check-in missed',
@@ -75,15 +80,30 @@ class AppEventNotificationDispatcher {
           title: 'Medication missed',
           body: '$medicationName was marked as missed today.',
         ),
+      MedicationTakenEvent(:final medicationName) => AppEventNotification(
+          level: NotificationLevel.info,
+          title: 'Medication confirmed',
+          body: '$medicationName was marked as taken.',
+        ),
       HydrationMissedEvent(:final slotLabel) => AppEventNotification(
           level: NotificationLevel.warning,
           title: 'Hydration reminder missed',
           body: '$slotLabel hydration was not confirmed.',
         ),
+      HydrationCompletedEvent(:final slotLabel) => AppEventNotification(
+          level: NotificationLevel.info,
+          title: 'Hydration completed',
+          body: '$slotLabel hydration was confirmed.',
+        ),
       MealMissedEvent(:final mealLabel) => AppEventNotification(
           level: NotificationLevel.warning,
           title: 'Meal reminder missed',
           body: '$mealLabel was not confirmed.',
+        ),
+      MealCompletedEvent(:final mealLabel) => AppEventNotification(
+          level: NotificationLevel.info,
+          title: 'Meal confirmed',
+          body: '$mealLabel was confirmed.',
         ),
       IncidentSuspectedEvent() => const AppEventNotification(
           level: NotificationLevel.warning,
@@ -106,6 +126,16 @@ class AppEventNotificationDispatcher {
           title: 'Outside safe zone',
           body: 'The local prototype marked the senior outside $zoneName.',
         ),
+      SafeZoneEnteredEvent(:final zoneName) => AppEventNotification(
+          level: NotificationLevel.info,
+          title: 'Back in safe zone',
+          body: 'The senior returned to $zoneName.',
+        ),
+      IncidentDismissedEvent() => const AppEventNotification(
+          level: NotificationLevel.info,
+          title: 'Incident resolved',
+          body: 'The incident was dismissed and marked as resolved.',
+        ),
       GuardianAlertGeneratedEvent(:final alertLevel) => AppEventNotification(
           level: alertLevel,
           title: 'Guardian alert',
@@ -118,12 +148,6 @@ class AppEventNotificationDispatcher {
           title: 'Status changed',
           body: 'Senior status is now ${newStatus.label}.',
         ),
-      CheckInCompletedEvent() ||
-      MedicationTakenEvent() ||
-      HydrationCompletedEvent() ||
-      MealCompletedEvent() ||
-      IncidentDismissedEvent() ||
-      SafeZoneEnteredEvent() ||
       SeniorStatusChangedEvent() =>
         null,
     };

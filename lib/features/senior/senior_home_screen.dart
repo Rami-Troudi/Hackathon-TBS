@@ -179,7 +179,8 @@ class _SeniorHomeContent extends ConsumerWidget {
     WidgetRef ref,
     String seniorId,
   ) async {
-    await ref.read(checkInRepositoryProvider).markNeedHelp(seniorId);
+    await ref.read(incidentRepositoryProvider).requestImmediateHelp(seniorId);
+    await ref.read(checkInRepositoryProvider).markCheckInCompleted(seniorId);
     ref.invalidate(seniorHomeDataProvider);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

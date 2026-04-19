@@ -166,6 +166,104 @@ PersistedEventRecord _record({
 }
 
 void main() {
+  test('adds resolved info alert when senior completed check-in today',
+      () async {
+    final repository = LocalGuardianAlertRepository(
+      eventRepository: _FakeEventRepository(<PersistedEventRecord>[
+        _record(
+          id: 'evt-checkin-completed',
+          type: AppEventType.checkInCompleted,
+          happenedAt: DateTime.parse('2026-04-18T08:30:00Z'),
+        ),
+      ]),
+      statusEngine: const SeniorStatusEngine(),
+      storage: _InMemoryStorageService(),
+    );
+
+    final alerts = await repository.fetchAlertsForSenior(
+      'senior-a',
+      now: DateTime.parse('2026-04-18T10:00:00Z'),
+    );
+
+    final checkInAlert = alerts.firstWhere(
+      (alert) => alert.id.startsWith('completed-check-in-'),
+    );
+    expect(checkInAlert.severity, GuardianAlertSeverity.info);
+    expect(checkInAlert.state, GuardianAlertState.resolved);
+    expect(checkInAlert.destination, GuardianMonitoringDestination.checkIns);
+  });
+
+  test('adds resolved info alerts for positive daily routine updates',
+      () async {
+    final repository = LocalGuardianAlertRepository(
+      eventRepository: _FakeEventRepository(<PersistedEventRecord>[
+        _record(
+          id: 'evt-medication-taken',
+          type: AppEventType.medicationTaken,
+          happenedAt: DateTime.parse('2026-04-18T08:30:00Z'),
+          payload: const <String, dynamic>{'medicationName': 'Aspirin'},
+        ),
+        _record(
+          id: 'evt-hydration-completed',
+          type: AppEventType.hydrationCompleted,
+          happenedAt: DateTime.parse('2026-04-18T09:00:00Z'),
+          payload: const <String, dynamic>{'slotLabel': 'Morning hydration'},
+        ),
+        _record(
+          id: 'evt-meal-completed',
+          type: AppEventType.mealCompleted,
+          happenedAt: DateTime.parse('2026-04-18T12:00:00Z'),
+          payload: const <String, dynamic>{'mealLabel': 'Lunch'},
+        ),
+        _record(
+          id: 'evt-safe-zone-entered',
+          type: AppEventType.safeZoneEntered,
+          happenedAt: DateTime.parse('2026-04-18T13:00:00Z'),
+          payload: const <String, dynamic>{
+            'zoneId': 'zone-home',
+            'zoneName': 'Home',
+          },
+        ),
+      ]),
+      statusEngine: const SeniorStatusEngine(),
+      storage: _InMemoryStorageService(),
+    );
+
+    final alerts = await repository.fetchAlertsForSenior(
+      'senior-a',
+      now: DateTime.parse('2026-04-18T14:00:00Z'),
+    );
+
+    final medicationAlert = alerts.firstWhere(
+      (alert) => alert.id.startsWith('completed-medication-'),
+    );
+    final hydrationAlert = alerts.firstWhere(
+      (alert) => alert.id.startsWith('completed-hydration-'),
+    );
+    final mealAlert = alerts.firstWhere(
+      (alert) => alert.id.startsWith('completed-meal-'),
+    );
+    final safeZoneAlert = alerts.firstWhere(
+      (alert) => alert.id.startsWith('safe-zone-returned-'),
+    );
+
+    expect(medicationAlert.severity, GuardianAlertSeverity.info);
+    expect(medicationAlert.state, GuardianAlertState.resolved);
+    expect(medicationAlert.destination, GuardianMonitoringDestination.medication);
+
+    expect(hydrationAlert.severity, GuardianAlertSeverity.info);
+    expect(hydrationAlert.state, GuardianAlertState.resolved);
+    expect(hydrationAlert.destination, GuardianMonitoringDestination.hydration);
+
+    expect(mealAlert.severity, GuardianAlertSeverity.info);
+    expect(mealAlert.state, GuardianAlertState.resolved);
+    expect(mealAlert.destination, GuardianMonitoringDestination.nutrition);
+
+    expect(safeZoneAlert.severity, GuardianAlertSeverity.info);
+    expect(safeZoneAlert.state, GuardianAlertState.resolved);
+    expect(safeZoneAlert.destination, GuardianMonitoringDestination.location);
+  });
+
   test('derives critical alerts for open confirmed incidents and emergencies',
       () async {
     final repository = LocalGuardianAlertRepository(

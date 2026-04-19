@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_router.dart';
@@ -9,6 +12,8 @@ import 'package:senior_companion/core/events/app_event_bus.dart';
 import 'package:senior_companion/core/events/app_event_mapper.dart';
 import 'package:senior_companion/core/events/app_event_recorder.dart';
 import 'package:senior_companion/core/events/status_engine.dart';
+import 'package:senior_companion/core/fall_detection/fall_detection_service.dart';
+import 'package:senior_companion/core/fall_detection/motion_sample.dart';
 import 'package:senior_companion/core/logging/app_logger.dart';
 import 'package:senior_companion/core/networking/api_client.dart';
 import 'package:senior_companion/core/networking/dio_provider.dart';
@@ -54,6 +59,7 @@ import 'package:senior_companion/core/voice/voice_gateway_client.dart';
 import 'package:senior_companion/core/voice/voice_playback_service.dart';
 import 'package:senior_companion/core/voice/voice_recording_service.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 
 final appConfigProvider = Provider<AppConfig>(
   (_) => throw UnimplementedError(
@@ -203,6 +209,35 @@ final appEventNotificationDispatcherProvider =
       };
     },
   ),
+);
+
+Stream<MotionSample> _defaultMotionSampleStream() {
+  if (kIsWeb) {
+    return const Stream<MotionSample>.empty();
+  }
+
+  return accelerometerEventStream().map(
+        (event) => MotionSample(
+          x: event.x,
+          y: event.y,
+          z: event.z,
+          capturedAt: DateTime.now().toUtc(),
+        ),
+      );
+}
+
+final fallDetectionServiceProvider = Provider<FallDetectionService>(
+  (ref) {
+    final service = SensorFallDetectionService(
+      activeSeniorResolver: ref.watch(activeSeniorResolverProvider),
+      incidentRepository: ref.watch(incidentRepositoryProvider),
+      logger: ref.watch(appLoggerProvider),
+      sensorStreamFactory: _defaultMotionSampleStream,
+    );
+    unawaited(service.initialize());
+    ref.onDispose(service.dispose);
+    return service;
+  },
 );
 
 final checkInRepositoryProvider = Provider<CheckInRepository>(

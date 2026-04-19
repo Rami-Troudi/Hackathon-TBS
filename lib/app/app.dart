@@ -9,6 +9,7 @@ class SeniorCompanionApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(fallDetectionServiceProvider);
     return MaterialApp.router(
       title: AppConstants.appName,
       theme: AppTheme.light,

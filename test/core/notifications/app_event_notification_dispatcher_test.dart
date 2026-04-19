@@ -8,6 +8,81 @@ import 'package:senior_companion/core/notifications/notification_service.dart';
 import 'package:senior_companion/core/permissions/permission_service.dart';
 
 void main() {
+  test('dispatches info notification for completed check-in', () async {
+    final notifications = _FakeNotificationService();
+    final dispatcher = AppEventNotificationDispatcher(
+      notificationService: notifications,
+      logger: const _NoopLogger(),
+      notificationsEnabled: () async => true,
+    );
+    final event = CheckInCompletedEvent(
+      seniorId: 'senior-a',
+      happenedAt: DateTime.utc(2026, 4, 19, 8),
+    );
+
+    await dispatcher.dispatch(
+      event,
+      _recordFor(event),
+      'senior.check_in',
+    );
+
+    expect(notifications.infoTitles, contains('Senior check-in confirmed'));
+    expect(notifications.warningTitles, isEmpty);
+    expect(notifications.criticalTitles, isEmpty);
+  });
+
+  test('dispatches info notifications for completed routine events', () async {
+    final notifications = _FakeNotificationService();
+    final dispatcher = AppEventNotificationDispatcher(
+      notificationService: notifications,
+      logger: const _NoopLogger(),
+      notificationsEnabled: () async => true,
+    );
+    final events = <AppEvent>[
+      MedicationTakenEvent(
+        seniorId: 'senior-a',
+        happenedAt: DateTime.utc(2026, 4, 19, 8, 10),
+        medicationName: 'Aspirin',
+      ),
+      HydrationCompletedEvent(
+        seniorId: 'senior-a',
+        happenedAt: DateTime.utc(2026, 4, 19, 9, 00),
+        slotLabel: 'Morning hydration',
+      ),
+      MealCompletedEvent(
+        seniorId: 'senior-a',
+        happenedAt: DateTime.utc(2026, 4, 19, 12, 00),
+        mealLabel: 'Lunch',
+      ),
+      SafeZoneEnteredEvent(
+        seniorId: 'senior-a',
+        happenedAt: DateTime.utc(2026, 4, 19, 13, 00),
+        zoneId: 'zone-home',
+        zoneName: 'Home',
+      ),
+      IncidentDismissedEvent(
+        seniorId: 'senior-a',
+        happenedAt: DateTime.utc(2026, 4, 19, 14, 00),
+      ),
+    ];
+
+    for (final event in events) {
+      await dispatcher.dispatch(
+        event,
+        _recordFor(event),
+        'senior.routine',
+      );
+    }
+
+    expect(notifications.infoTitles, contains('Medication confirmed'));
+    expect(notifications.infoTitles, contains('Hydration completed'));
+    expect(notifications.infoTitles, contains('Meal confirmed'));
+    expect(notifications.infoTitles, contains('Back in safe zone'));
+    expect(notifications.infoTitles, contains('Incident resolved'));
+    expect(notifications.warningTitles, isEmpty);
+    expect(notifications.criticalTitles, isEmpty);
+  });
+
   test('dispatches warning notification for missed check-in', () async {
     final notifications = _FakeNotificationService();
     final dispatcher = AppEventNotificationDispatcher(
@@ -85,6 +160,7 @@ PersistedEventRecord _recordFor(AppEvent event) {
 }
 
 class _FakeNotificationService implements NotificationService {
+  final infoTitles = <String>[];
   final warningTitles = <String>[];
   final criticalTitles = <String>[];
 
@@ -107,7 +183,9 @@ class _FakeNotificationService implements NotificationService {
   Future<void> showInfo({
     required String title,
     required String body,
-  }) async {}
+  }) async {
+    infoTitles.add(title);
+  }
 
   @override
   Future<void> showWarning({

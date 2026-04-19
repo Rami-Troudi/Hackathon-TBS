@@ -126,6 +126,36 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
       reference: reference,
       type: AppEventType.mealMissed,
     );
+    final todayTakenMedication = _latestTodayEvent(
+      timeline,
+      reference: reference,
+      type: AppEventType.medicationTaken,
+    );
+    final todayTakenMedicationCount = _todayEventCount(
+      timeline,
+      reference: reference,
+      type: AppEventType.medicationTaken,
+    );
+    final todayCompletedHydration = _latestTodayEvent(
+      timeline,
+      reference: reference,
+      type: AppEventType.hydrationCompleted,
+    );
+    final todayCompletedHydrationCount = _todayEventCount(
+      timeline,
+      reference: reference,
+      type: AppEventType.hydrationCompleted,
+    );
+    final todayCompletedMeal = _latestTodayEvent(
+      timeline,
+      reference: reference,
+      type: AppEventType.mealCompleted,
+    );
+    final todayCompletedMealCount = _todayEventCount(
+      timeline,
+      reference: reference,
+      type: AppEventType.mealCompleted,
+    );
 
     final warningSignalsToday = evaluation.missedMedications +
         evaluation.missedCheckIns +
@@ -170,6 +200,82 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
           relatedEventType: todayMissedCheckIn.type,
           relatedEventId: todayMissedCheckIn.id,
           destination: GuardianMonitoringDestination.checkIns,
+        ),
+      );
+    }
+
+    final todayCompletedCheckIn = _latestTodayEvent(
+      timeline,
+      reference: reference,
+      type: AppEventType.checkInCompleted,
+    );
+    if (todayCompletedCheckIn != null) {
+      alerts.add(
+        GuardianAlert(
+          id: 'completed-check-in-${_dayKey(reference)}-$seniorId',
+          seniorId: seniorId,
+          title: 'Senior checked in',
+          explanation:
+              'The senior tapped "I\'m okay" and confirmed today\'s check-in.',
+          happenedAt: todayCompletedCheckIn.happenedAt,
+          severity: GuardianAlertSeverity.info,
+          state: GuardianAlertState.resolved,
+          relatedEventType: todayCompletedCheckIn.type,
+          relatedEventId: todayCompletedCheckIn.id,
+          destination: GuardianMonitoringDestination.checkIns,
+        ),
+      );
+    }
+
+    if (todayTakenMedication != null) {
+      alerts.add(
+        GuardianAlert(
+          id: 'completed-medication-${_dayKey(reference)}-$seniorId',
+          seniorId: seniorId,
+          title: 'Medication routine completed',
+          explanation:
+              'Medication doses confirmed today: $todayTakenMedicationCount.',
+          happenedAt: todayTakenMedication.happenedAt,
+          severity: GuardianAlertSeverity.info,
+          state: GuardianAlertState.resolved,
+          relatedEventType: todayTakenMedication.type,
+          relatedEventId: todayTakenMedication.id,
+          destination: GuardianMonitoringDestination.medication,
+        ),
+      );
+    }
+
+    if (todayCompletedHydration != null) {
+      alerts.add(
+        GuardianAlert(
+          id: 'completed-hydration-${_dayKey(reference)}-$seniorId',
+          seniorId: seniorId,
+          title: 'Hydration routine completed',
+          explanation:
+              'Hydration reminders completed today: $todayCompletedHydrationCount.',
+          happenedAt: todayCompletedHydration.happenedAt,
+          severity: GuardianAlertSeverity.info,
+          state: GuardianAlertState.resolved,
+          relatedEventType: todayCompletedHydration.type,
+          relatedEventId: todayCompletedHydration.id,
+          destination: GuardianMonitoringDestination.hydration,
+        ),
+      );
+    }
+
+    if (todayCompletedMeal != null) {
+      alerts.add(
+        GuardianAlert(
+          id: 'completed-meal-${_dayKey(reference)}-$seniorId',
+          seniorId: seniorId,
+          title: 'Nutrition routine completed',
+          explanation: 'Meals confirmed today: $todayCompletedMealCount.',
+          happenedAt: todayCompletedMeal.happenedAt,
+          severity: GuardianAlertSeverity.info,
+          state: GuardianAlertState.resolved,
+          relatedEventType: todayCompletedMeal.type,
+          relatedEventId: todayCompletedMeal.id,
+          destination: GuardianMonitoringDestination.nutrition,
         ),
       );
     }
@@ -238,6 +344,31 @@ class LocalGuardianAlertRepository implements GuardianAlertRepository {
           state: GuardianAlertState.active,
           relatedEventType: exitEvent.type,
           relatedEventId: exitEvent.id,
+          destination: GuardianMonitoringDestination.location,
+        ),
+      );
+    }
+
+    final todaySafeZoneEntered = _latestTodayEvent(
+      timeline,
+      reference: reference,
+      type: AppEventType.safeZoneEntered,
+    );
+    if (todaySafeZoneEntered != null) {
+      final zoneName = todaySafeZoneEntered.payload['zoneName'] as String?;
+      alerts.add(
+        GuardianAlert(
+          id: 'safe-zone-returned-${_dayKey(reference)}-$seniorId',
+          seniorId: seniorId,
+          title: 'Back in safe zone',
+          explanation: zoneName == null || zoneName.isEmpty
+              ? 'The senior returned to a configured safe zone.'
+              : 'The senior returned to $zoneName.',
+          happenedAt: todaySafeZoneEntered.happenedAt,
+          severity: GuardianAlertSeverity.info,
+          state: GuardianAlertState.resolved,
+          relatedEventType: todaySafeZoneEntered.type,
+          relatedEventId: todaySafeZoneEntered.id,
           destination: GuardianMonitoringDestination.location,
         ),
       );
