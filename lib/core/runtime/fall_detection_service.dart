@@ -24,7 +24,7 @@ class FallDetectionService {
 
   void start() {
     if (_subscription != null) return;
-    _subscription = accelerometerEvents.listen(_onAcceleration);
+    _subscription = accelerometerEventStream().listen(_onAcceleration);
     logger.info('FallDetectionService started');
   }
 
