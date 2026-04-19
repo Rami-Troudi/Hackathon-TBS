@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:senior_companion/app/bootstrap/app_initializer.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/core/config/app_config.dart';
+import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/core/logging/app_logger.dart';
 import 'package:senior_companion/core/logging/debug_logger.dart';
 import 'package:senior_companion/core/notifications/notification_service.dart';
@@ -38,6 +39,10 @@ class AppBootstrap {
     );
     final permissionService =
         PermissionHandlerPermissionService(logger: logger);
+    final connectivityStateService = LocalConnectivityStateService(
+      storage: storageService,
+      logger: logger,
+    );
     final notificationService = LocalNotificationService(
       logger: logger,
       permissionService: permissionService,
@@ -51,6 +56,7 @@ class AppBootstrap {
     );
 
     await initializer.initialize();
+    await connectivityStateService.initialize();
 
     return AppBootstrapData(
       logger: logger,
@@ -60,6 +66,8 @@ class AppBootstrap {
         storageServiceProvider.overrideWithValue(storageService),
         hiveInitializerProvider.overrideWithValue(hiveInitializer),
         permissionServiceProvider.overrideWithValue(permissionService),
+        connectivityStateServiceProvider
+            .overrideWithValue(connectivityStateService),
         notificationServiceProvider.overrideWithValue(notificationService),
         profileRepositoryProvider.overrideWithValue(profileRepository),
         demoSeedRepositoryProvider.overrideWithValue(demoSeedRepository),

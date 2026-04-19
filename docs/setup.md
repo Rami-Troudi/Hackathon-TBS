@@ -279,8 +279,11 @@ fvm flutter clean && fvm flutter pub get
   dart run build_runner build --delete-conflicting-outputs
   ```
 - **Notification permissions.** On a physical device, the Settings screen
-  provides a button to request notification and location permissions. On
+  provides state-aware actions for notification and location permissions
+  (request permission or open system settings when permanently denied). On
   simulators/emulators, permission dialogs may behave differently.
+- **Connectivity mode scaffold.** Settings includes an online/degraded/offline
+  selector used to test degraded UX while keeping the app local-first.
 - **Environment flag.** The `APP_ENV` dart-define is optional. When omitted,
   the app defaults to `dev`. You never need to set it during normal prototype
   development.
@@ -320,7 +323,9 @@ Check `AppInitializer.initialize()` in `lib/app/bootstrap/app_initializer.dart`.
 ### Notification permission is not requested automatically
 
 By design, permissions are requested lazily. Go to **Settings** in the app
-and tap **Request Notification Permission** to trigger the permission dialog.
+and use the permission action shown for the current state:
+- **Request Permission** when status is denied/limited
+- **Open System Settings** when status is permanently denied/restricted
 
 ### Hot reload does not reflect changes to providers
 

@@ -56,6 +56,7 @@ imports from features.
 
 | Folder | Responsibility |
 |---|---|
+| `connectivity/` | Connectivity mode service (`online/degraded/offline`) for degraded-state UX scaffolding |
 | `config/` | Environment-aware app configuration |
 | `ai/` | AI orchestration, context/prompt builders, adapter abstraction, deterministic fallback, status/alert explanation services |
 | `errors/` | `AppException` + `AppErrorMapper` |
@@ -111,6 +112,7 @@ main()
        ├─ LocalProfileRepository constructed
        ├─ LocalDemoSeedRepository constructed
        ├─ PermissionHandlerPermissionService constructed
+       ├─ LocalConnectivityStateService constructed
        ├─ LocalNotificationService constructed
        │
        └─ AppInitializer.initialize()
@@ -118,6 +120,8 @@ main()
             ├─ hiveInitializer.initialize()     ← awaited
             ├─ demoSeedRepository.seedIfNeeded() ← awaited
             └─ notificationService.initialize() ← awaited
+       │
+       └─ connectivityStateService.initialize() ← awaited
        │
        └─ AppBootstrapData returned
             ├─ overrides: List<Override>   ← injected into ProviderScope

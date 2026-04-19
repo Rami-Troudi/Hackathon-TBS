@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
+import 'package:senior_companion/app/bootstrap/providers.dart';
+import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/features/guardian/guardian_home_providers.dart';
 import 'package:senior_companion/features/guardian/guardian_ui_helpers.dart';
@@ -12,6 +14,7 @@ import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
+import 'package:senior_companion/shared/widgets/connectivity_banner.dart';
 
 class GuardianHomeScreen extends ConsumerWidget {
   const GuardianHomeScreen({super.key});
@@ -19,6 +22,9 @@ class GuardianHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dataAsync = ref.watch(guardianHomeDataProvider);
+    final connectivityState =
+        ref.watch(connectivityStateProvider).valueOrNull ??
+            AppConnectivityState.online;
 
     return AppScaffoldShell(
       title: 'Guardian Dashboard',
@@ -71,6 +77,10 @@ class GuardianHomeScreen extends ConsumerWidget {
                 guardianLabel,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+              if (connectivityState != AppConnectivityState.online) ...[
+                Gaps.v16,
+                ConnectivityBanner(state: connectivityState),
+              ],
               Gaps.v16,
               _GlobalStatusCard(
                 status: data.dashboardSummary.globalStatus,

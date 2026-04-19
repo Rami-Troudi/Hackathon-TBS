@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
+import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/core/permissions/permission_service.dart';
+import 'package:senior_companion/features/settings/permission_ui_state.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/models/app_session.dart';
@@ -21,6 +23,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   AppPermissionStatus? _notificationPermissionStatus;
   AppPermissionStatus? _locationPermissionStatus;
+  AppConnectivityState _connectivityState = AppConnectivityState.online;
   AppSession? _activeSession;
   SeniorSettingsPreferences? _seniorSettings;
   GuardianSettingsPreferences? _guardianSettings;
@@ -36,12 +39,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final permissionService = ref.read(permissionServiceProvider);
+    final connectivityStateService = ref.read(connectivityStateServiceProvider);
     final sessionRepository = ref.read(appSessionRepositoryProvider);
     final settingsRepository = ref.read(settingsRepositoryProvider);
 
     final notificationStatus = await permissionService.notificationStatus();
     final locationStatus = await permissionService.locationStatus();
     final session = await sessionRepository.getSession();
+    final connectivityState = connectivityStateService.currentState;
 
     SeniorSettingsPreferences? seniorSettings;
     GuardianSettingsPreferences? guardianSettings;
@@ -59,6 +64,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _notificationPermissionStatus = notificationStatus;
       _locationPermissionStatus = locationStatus;
+      _connectivityState = connectivityState;
       _activeSession = session;
       _seniorSettings = seniorSettings;
       _guardianSettings = guardianSettings;
@@ -101,6 +107,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     setState(() {
       _locationPermissionStatus = status;
     });
+  }
+
+  Future<void> _openSystemSettings() async {
+    final opened =
+        await ref.read(permissionServiceProvider).openSystemSettings();
+    if (!mounted) return;
+    if (!opened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open system settings.')),
+      );
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content:
+              Text('System settings opened. Return here to refresh status.')),
+    );
+  }
+
+  Future<void> _setConnectivityState(AppConnectivityState state) async {
+    await ref.read(connectivityStateServiceProvider).setState(state);
+    if (!mounted) return;
+    setState(() => _connectivityState = state);
   }
 
   Future<void> _editEmergencyContactLabel(
@@ -391,6 +420,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ];
   }
 
+  String _connectivityLabel(AppConnectivityState state) => switch (state) {
+        AppConnectivityState.online => 'Online',
+        AppConnectivityState.degraded => 'Degraded',
+        AppConnectivityState.offline => 'Offline',
+      };
+
+  String _connectivityDescription(AppConnectivityState state) =>
+      switch (state) {
+        AppConnectivityState.online =>
+          'All network-dependent features are available.',
+        AppConnectivityState.degraded =>
+          'Use local data first; remote responses may be delayed.',
+        AppConnectivityState.offline =>
+          'Only local data is available until connectivity is restored.',
+      };
+
   @override
   Widget build(BuildContext context) {
     final shellRole =
@@ -420,23 +465,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               icon: Icons.notifications_active_outlined,
               title: 'Notification permission',
               description:
-                  'Status: ${_notificationPermissionStatus ?? 'unknown'}',
+                  permissionUiStateFor(_notificationPermissionStatus).detail,
             ),
             Gaps.v8,
-            ElevatedButton(
-              onPressed: _requestNotificationPermission,
-              child: const Text('Request Notification Permission'),
+            _PermissionActionRow(
+              state: permissionUiStateFor(_notificationPermissionStatus),
+              onRequest: _requestNotificationPermission,
+              onOpenSettings: _openSystemSettings,
             ),
             Gaps.v16,
             FeaturePlaceholderCard(
               icon: Icons.my_location_outlined,
               title: 'Location permission',
-              description: 'Status: ${_locationPermissionStatus ?? 'unknown'}',
+              description:
+                  permissionUiStateFor(_locationPermissionStatus).detail,
             ),
             Gaps.v8,
-            ElevatedButton(
-              onPressed: _requestLocationPermission,
-              child: const Text('Request Location Permission'),
+            _PermissionActionRow(
+              state: permissionUiStateFor(_locationPermissionStatus),
+              onRequest: _requestLocationPermission,
+              onOpenSettings: _openSystemSettings,
+            ),
+            Gaps.v16,
+            FeaturePlaceholderCard(
+              icon: Icons.wifi_tethering_outlined,
+              title: 'Connectivity mode',
+              description: _connectivityDescription(_connectivityState),
+            ),
+            Gaps.v8,
+            SegmentedButton<AppConnectivityState>(
+              segments: AppConnectivityState.values
+                  .map(
+                    (state) => ButtonSegment<AppConnectivityState>(
+                      value: state,
+                      label: Text(_connectivityLabel(state)),
+                    ),
+                  )
+                  .toList(growable: false),
+              selected: <AppConnectivityState>{_connectivityState},
+              onSelectionChanged: (selection) {
+                if (selection.isEmpty) return;
+                _setConnectivityState(selection.first);
+              },
             ),
             Gaps.v24,
             Text('Developer tools',
@@ -464,6 +534,47 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ],
       ),
+    );
+  }
+}
+
+class _PermissionActionRow extends StatelessWidget {
+  const _PermissionActionRow({
+    required this.state,
+    required this.onRequest,
+    required this.onOpenSettings,
+  });
+
+  final PermissionUiState state;
+  final VoidCallback onRequest;
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    final action = switch (state.action) {
+      PermissionUiAction.none => null,
+      PermissionUiAction.request => FilledButton(
+          onPressed: onRequest,
+          child: const Text('Request Permission'),
+        ),
+      PermissionUiAction.openSettings => OutlinedButton(
+          onPressed: onOpenSettings,
+          child: const Text('Open System Settings'),
+        ),
+    };
+
+    return Row(
+      children: [
+        Icon(state.icon, size: 20),
+        Gaps.h8,
+        Expanded(
+          child: Text(
+            state.title,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        if (action != null) action,
+      ],
     );
   }
 }

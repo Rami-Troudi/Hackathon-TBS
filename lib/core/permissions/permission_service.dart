@@ -14,6 +14,7 @@ abstract class PermissionService {
   Future<AppPermissionStatus> requestNotificationPermission();
   Future<AppPermissionStatus> locationStatus();
   Future<AppPermissionStatus> requestLocationPermission();
+  Future<bool> openSystemSettings();
 }
 
 class PermissionHandlerPermissionService implements PermissionService {
@@ -59,5 +60,12 @@ class PermissionHandlerPermissionService implements PermissionService {
     final mapped = _mapStatus(status);
     logger.info('Location permission status: $mapped');
     return mapped;
+  }
+
+  @override
+  Future<bool> openSystemSettings() async {
+    final opened = await openAppSettings();
+    logger.info('Open system settings requested: $opened');
+    return opened;
   }
 }

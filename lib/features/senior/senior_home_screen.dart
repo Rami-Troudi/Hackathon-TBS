@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
+import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
@@ -14,6 +15,7 @@ import 'package:senior_companion/shared/models/safe_zone_status.dart';
 import 'package:senior_companion/shared/models/senior_global_status.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
 import 'package:senior_companion/shared/widgets/app_ui_kit.dart';
+import 'package:senior_companion/shared/widgets/connectivity_banner.dart';
 
 class SeniorHomeScreen extends ConsumerWidget {
   const SeniorHomeScreen({super.key});
@@ -75,6 +77,9 @@ class _SeniorHomeContent extends ConsumerWidget {
             settings.languageCode,
             emergencyContactLabel: settings.emergencyContactLabel,
           );
+    final connectivityState =
+        ref.watch(connectivityStateProvider).valueOrNull ??
+            AppConnectivityState.online;
 
     return ListView(
       children: [
@@ -84,6 +89,10 @@ class _SeniorHomeContent extends ConsumerWidget {
           supportLine,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
+        if (connectivityState != AppConnectivityState.online) ...[
+          Gaps.v16,
+          ConnectivityBanner(state: connectivityState),
+        ],
         Gaps.v16,
         _StatusCard(summary: data.summary),
         Gaps.v16,
@@ -321,24 +330,63 @@ class _TodayRoutineCard extends StatelessWidget {
                 child: const Text('Medication'),
               ),
               FilledButton.tonal(
-                onPressed: onHydration,
-                child: const Text('Hydration'),
-              ),
-              FilledButton.tonal(
-                onPressed: onNutrition,
-                child: const Text('Meals'),
-              ),
-              TextButton(
-                onPressed: onSummary,
-                child: const Text('Daily summary'),
-              ),
-              FilledButton.tonal(
                 onPressed: onCompanion,
                 child: const Text('Companion'),
               ),
+              if (!simplifiedModeEnabled)
+                OutlinedButton.icon(
+                  onPressed: () => _showMoreActions(context),
+                  icon: const Icon(Icons.more_horiz),
+                  label: const Text('More options'),
+                ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showMoreActions(BuildContext context) {
+    return showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Additional actions',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Gaps.v12,
+              FilledButton.tonal(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onHydration();
+                },
+                child: const Text('Hydration'),
+              ),
+              Gaps.v8,
+              FilledButton.tonal(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onNutrition();
+                },
+                child: const Text('Meals'),
+              ),
+              Gaps.v8,
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  onSummary();
+                },
+                child: const Text('Daily summary'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

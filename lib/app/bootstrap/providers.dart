@@ -10,6 +10,7 @@ import 'package:senior_companion/core/ai/ai_provider_adapter.dart';
 import 'package:senior_companion/core/ai/ai_response_parser.dart';
 import 'package:senior_companion/core/ai/alert_explanation_service.dart';
 import 'package:senior_companion/core/ai/status_explanation_service.dart';
+import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/core/config/app_config.dart';
 import 'package:senior_companion/core/events/app_event_bus.dart';
 import 'package:senior_companion/core/events/app_event_mapper.dart';
@@ -77,6 +78,18 @@ final hiveInitializerProvider = Provider<HiveInitializer>(
 final permissionServiceProvider = Provider<PermissionService>(
   (_) => throw UnimplementedError(
       'permissionServiceProvider must be overridden at bootstrap'),
+);
+
+final connectivityStateServiceProvider = Provider<ConnectivityStateService>(
+  (ref) {
+    final service = InMemoryConnectivityStateService();
+    ref.onDispose(service.dispose);
+    return service;
+  },
+);
+
+final connectivityStateProvider = StreamProvider<AppConnectivityState>(
+  (ref) => ref.watch(connectivityStateServiceProvider).watch(),
 );
 
 final notificationServiceProvider = Provider<NotificationService>(

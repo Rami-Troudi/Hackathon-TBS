@@ -208,6 +208,8 @@ Group 5 extends the product into a fuller daily companion, while staying local-f
 - **Settings expansion**
   - Senior settings: text size, high contrast, notifications, reminder intensity, language, emergency label, simplified mode
   - Guardian settings: notifications, alert sensitivity, digest toggles, module visibility toggles, linked senior info visibility
+  - Permission UX maps denied/permanently denied/restricted/limited states to clear actions (request vs open system settings)
+  - Connectivity mode scaffold (online/degraded/offline) is persisted locally for degraded-state simulation
   - Settings persist per active profile in `SharedPreferences` through `LocalSettingsRepository`
 - **Hydration module**
   - Senior flow with deterministic morning/afternoon/evening slots
@@ -262,6 +264,15 @@ Group 7 adds a grounded AI layer above existing repositories/events/status/summa
 - Guardian:
   - `/guardian/insights`
 
+## Technical UX hardening
+
+- Senior home keeps core actions visible by default and moves secondary actions
+  (hydration, meals, daily summary) behind **More options**.
+- Senior and guardian homes now render a connectivity banner in degraded/offline
+  mode while continuing to operate from local persisted data.
+- Settings now provides explicit permission guidance for denied and permanently
+  denied states, including an open-system-settings path.
+
 ## Demo data reset flow (G1)
 
 From **Settings**:
@@ -290,6 +301,7 @@ lib/
     router/
     theme/
   core/
+    connectivity/
     config/
     errors/
     events/
