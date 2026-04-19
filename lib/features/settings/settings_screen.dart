@@ -7,6 +7,7 @@ import 'package:senior_companion/core/connectivity/connectivity_state_service.da
 import 'package:senior_companion/core/permissions/permission_service.dart';
 import 'package:senior_companion/features/settings/permission_ui_state.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
+import 'package:senior_companion/shared/localization/app_tr.dart';
 import 'package:senior_companion/shared/models/app_role.dart';
 import 'package:senior_companion/shared/models/app_session.dart';
 import 'package:senior_companion/shared/models/settings_preferences.dart';
@@ -27,6 +28,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   AppSession? _activeSession;
   SeniorSettingsPreferences? _seniorSettings;
   GuardianSettingsPreferences? _guardianSettings;
+  String _appLanguageCode = 'fr';
 
   @override
   void initState() {
@@ -42,10 +44,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final connectivityStateService = ref.read(connectivityStateServiceProvider);
     final sessionRepository = ref.read(appSessionRepositoryProvider);
     final settingsRepository = ref.read(settingsRepositoryProvider);
+    final preferencesRepository = ref.read(preferencesRepositoryProvider);
 
     final notificationStatus = await permissionService.notificationStatus();
     final locationStatus = await permissionService.locationStatus();
     final session = await sessionRepository.getSession();
+    final appLanguageCode = await preferencesRepository.getAppLanguageCode();
     final connectivityState = connectivityStateService.currentState;
 
     SeniorSettingsPreferences? seniorSettings;
@@ -68,6 +72,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _activeSession = session;
       _seniorSettings = seniorSettings;
       _guardianSettings = guardianSettings;
+      _appLanguageCode = appLanguageCode;
     });
   }
 
@@ -94,6 +99,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.read(appPresentationSettingsRevisionProvider.notifier).state++;
     if (!mounted) return;
     setState(() => _guardianSettings = settings);
+  }
+
+  Future<void> _saveAppLanguage(String languageCode) async {
+    await ref
+        .read(preferencesRepositoryProvider)
+        .setAppLanguageCode(languageCode);
+    ref.read(appPresentationSettingsRevisionProvider.notifier).state++;
+    if (!mounted) return;
+    setState(() => _appLanguageCode = languageCode);
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -262,9 +276,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   List<Widget> _buildRoleSettings() {
+    final globalLanguage = <Widget>[
+      Text(
+        tr(context,
+            fr: 'Langue de l’application',
+            en: 'App language',
+            ar: 'لغة التطبيق'),
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
+      Gaps.v8,
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        title: Text(tr(context, fr: 'Langue', en: 'Language', ar: 'اللغة')),
+        trailing: DropdownButton<String>(
+          value: _appLanguageCode,
+          onChanged: (value) {
+            if (value == null) return;
+            _saveAppLanguage(value);
+          },
+          items: const [
+            DropdownMenuItem(value: 'fr', child: Text('Français')),
+            DropdownMenuItem(value: 'en', child: Text('English')),
+            DropdownMenuItem(value: 'ar', child: Text('العربية')),
+          ],
+        ),
+      ),
+      Gaps.v12,
+    ];
+
     if (_isSeniorRole && _seniorSettings != null) {
       final settings = _seniorSettings!;
       return [
+        ...globalLanguage,
         Text('Senior preferences',
             style: Theme.of(context).textTheme.titleLarge),
         Gaps.v8,
@@ -343,6 +386,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (_isGuardianRole && _guardianSettings != null) {
       final settings = _guardianSettings!;
       return [
+        ...globalLanguage,
         Text('Guardian preferences',
             style: Theme.of(context).textTheme.titleLarge),
         Gaps.v8,
@@ -416,8 +460,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ];
     }
 
-    return const [
-      FeaturePlaceholderCard(
+    return [
+      ...globalLanguage,
+      const FeaturePlaceholderCard(
         icon: Icons.info_outline,
         title: 'Role preferences unavailable',
         description: 'Start a session from onboarding to configure settings.',

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/app/theme/app_colors.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
+import 'package:senior_companion/shared/localization/app_tr.dart';
 
 enum AppShellRole {
   senior,
@@ -78,31 +79,56 @@ class _GuardianBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return NavigationBar(
       selectedIndex: _selectedIndex(context),
-      destinations: const [
+      destinations: [
         NavigationDestination(
-          icon: Icon(Icons.dashboard_outlined),
-          selectedIcon: Icon(Icons.dashboard),
-          label: 'Dashboard',
+          icon: const Icon(Icons.dashboard_outlined),
+          selectedIcon: const Icon(Icons.dashboard),
+          label: tr(
+            context,
+            fr: 'Tableau',
+            en: 'Dashboard',
+            ar: 'لوحة المتابعة',
+          ),
         ),
         NavigationDestination(
-          icon: Icon(Icons.notifications_outlined),
-          selectedIcon: Icon(Icons.notifications_active),
-          label: 'Alerts',
+          icon: const Icon(Icons.notifications_outlined),
+          selectedIcon: const Icon(Icons.notifications_active),
+          label: tr(
+            context,
+            fr: 'Alertes',
+            en: 'Alerts',
+            ar: 'التنبيهات',
+          ),
         ),
         NavigationDestination(
-          icon: Icon(Icons.timeline_outlined),
-          selectedIcon: Icon(Icons.timeline),
-          label: 'Timeline',
+          icon: const Icon(Icons.timeline_outlined),
+          selectedIcon: const Icon(Icons.timeline),
+          label: tr(
+            context,
+            fr: 'Chronologie',
+            en: 'Timeline',
+            ar: 'التسلسل',
+          ),
         ),
         NavigationDestination(
-          icon: Icon(Icons.auto_awesome_outlined),
-          selectedIcon: Icon(Icons.auto_awesome),
-          label: 'Summary',
+          icon: const Icon(Icons.auto_awesome_outlined),
+          selectedIcon: const Icon(Icons.auto_awesome),
+          label: tr(
+            context,
+            fr: 'Résumé',
+            en: 'Summary',
+            ar: 'الملخص',
+          ),
         ),
         NavigationDestination(
-          icon: Icon(Icons.settings_outlined),
-          selectedIcon: Icon(Icons.settings),
-          label: 'Settings',
+          icon: const Icon(Icons.settings_outlined),
+          selectedIcon: const Icon(Icons.settings),
+          label: tr(
+            context,
+            fr: 'Paramètres',
+            en: 'Settings',
+            ar: 'الإعدادات',
+          ),
         ),
       ],
       onDestinationSelected: (index) {

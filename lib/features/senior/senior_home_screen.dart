@@ -6,6 +6,7 @@ import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/core/connectivity/connectivity_state_service.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
+import 'package:senior_companion/shared/localization/app_tr.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
 import 'package:senior_companion/shared/models/dashboard_summary.dart';
 import 'package:senior_companion/shared/models/medication_reminder.dart';
@@ -29,19 +30,33 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
   Widget build(BuildContext context) {
     final seniorHomeAsync = ref.watch(seniorHomeDataProvider);
     return AppScaffoldShell(
-      title: 'Today',
+      title: tr(context, fr: 'Aujourd’hui', en: 'Today', ar: 'اليوم'),
       role: AppShellRole.senior,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.settings),
           icon: const Icon(Icons.settings_outlined),
-          tooltip: 'Settings',
+          tooltip: tr(
+            context,
+            fr: 'Paramètres',
+            en: 'Settings',
+            ar: 'الإعدادات',
+          ),
         ),
       ],
       child: seniorHomeAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) =>
-            Center(child: Text('Could not load senior home: $error')),
+            Center(
+              child: Text(
+                tr(
+                  context,
+                  fr: 'Impossible de charger l’accueil senior : $error',
+                  en: 'Could not load senior home: $error',
+                  ar: 'تعذر تحميل شاشة المسن: $error',
+                ),
+              ),
+            ),
         data: (data) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _showUrgentPromptIfNeeded(context, data);
@@ -66,10 +81,20 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
       _lastPromptToken = promptToken;
       final yes = await _showSeniorPrompt(
         context,
-        title: 'Are you okay?',
-        body: 'Please confirm your daily check-in now.',
-        yesLabel: 'Yes',
-        noLabel: 'No',
+        title: tr(
+          context,
+          fr: 'Vous allez bien ?',
+          en: 'Are you okay?',
+          ar: 'هل أنت بخير؟',
+        ),
+        body: tr(
+          context,
+          fr: 'Confirmez votre check-in quotidien maintenant.',
+          en: 'Please confirm your daily check-in now.',
+          ar: 'يرجى تأكيد تسجيل الحضور اليومي الآن.',
+        ),
+        yesLabel: tr(context, fr: 'Oui', en: 'Yes', ar: 'نعم'),
+        noLabel: tr(context, fr: 'Non', en: 'No', ar: 'لا'),
       );
       if (!mounted) return;
       if (yes == true) {
@@ -90,11 +115,23 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
       _lastPromptToken = promptToken;
       final yes = await _showSeniorPrompt(
         context,
-        title: 'Medication reminder',
-        body:
-            'Did you take ${reminder.plan.medicationName} (${reminder.slotLabel})?',
-        yesLabel: 'Taken',
-        noLabel: 'Not yet',
+        title: tr(
+          context,
+          fr: 'Rappel médicament',
+          en: 'Medication reminder',
+          ar: 'تذكير الدواء',
+        ),
+        body: tr(
+          context,
+          fr:
+              'Avez-vous pris ${reminder.plan.medicationName} (${reminder.slotLabel}) ?',
+          en:
+              'Did you take ${reminder.plan.medicationName} (${reminder.slotLabel})?',
+          ar:
+              'هل تناولت ${reminder.plan.medicationName} (${reminder.slotLabel})؟',
+        ),
+        yesLabel: tr(context, fr: 'Pris', en: 'Taken', ar: 'تم'),
+        noLabel: tr(context, fr: 'Pas encore', en: 'Not yet', ar: 'ليس بعد'),
       );
       if (!mounted) return;
       if (yes == true) {
@@ -122,7 +159,12 @@ class _SeniorHomeScreenState extends ConsumerState<SeniorHomeScreen> {
     return showGeneralDialog<bool>(
       context: context,
       barrierDismissible: false,
-      barrierLabel: 'Senior prompt',
+      barrierLabel: tr(
+        context,
+        fr: 'Alerte senior',
+        en: 'Senior prompt',
+        ar: 'تنبيه للمسن',
+      ),
       transitionDuration: const Duration(milliseconds: 180),
       pageBuilder: (_, __, ___) => Scaffold(
         body: SafeArea(
@@ -185,17 +227,26 @@ class _SeniorHomeContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final seniorId = data.activeSeniorId;
     if (seniorId == null) {
-      return const EmptyStateBlock(
-        title: 'No active senior profile',
-        description: 'Open settings to switch to a senior profile.',
+      return EmptyStateBlock(
+        title: tr(
+          context,
+          fr: 'Aucun profil senior actif',
+          en: 'No active senior profile',
+          ar: 'لا يوجد ملف مسن نشط',
+        ),
+        description: tr(
+          context,
+          fr: 'Ouvrez les paramètres pour passer sur un profil senior.',
+          en: 'Open settings to switch to a senior profile.',
+          ar: 'افتح الإعدادات للتبديل إلى ملف مسن.',
+        ),
         icon: Icons.person_off_outlined,
       );
     }
 
-    final settings = data.settings;
     final profileName = data.profile?.displayName ?? 'there';
-    final greeting = switch (settings.languageCode) {
-      'ar' => 'Marhaban, $profileName',
+    final greeting = switch (Localizations.localeOf(context).languageCode) {
+      'ar' => 'مرحبا، $profileName',
       'en' => 'Hello, $profileName',
       _ => 'Bonjour, $profileName',
     };
@@ -208,7 +259,12 @@ class _SeniorHomeContent extends ConsumerWidget {
         Text(greeting, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: AppSpacing.xs),
         Text(
-          'Quick actions below keep your family informed.',
+          tr(
+            context,
+            fr: 'Les actions rapides ci-dessous informent votre famille.',
+            en: 'Quick actions below keep your family informed.',
+            ar: 'الإجراءات السريعة أدناه تُبقي عائلتك على اطلاع.',
+          ),
           style: Theme.of(context).textTheme.bodyMedium,
         ),
         if (connectivityState != AppConnectivityState.online) ...[
@@ -229,7 +285,21 @@ class _SeniorHomeContent extends ConsumerWidget {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content:
-                    Text(created ? 'Check-in completed' : 'Already completed'),
+                    Text(
+                      created
+                          ? tr(
+                              context,
+                              fr: 'Check-in confirmé',
+                              en: 'Check-in completed',
+                              ar: 'تم تأكيد تسجيل الحضور',
+                            )
+                          : tr(
+                              context,
+                              fr: 'Déjà confirmé',
+                              en: 'Already completed',
+                              ar: 'تم التأكيد مسبقًا',
+                            ),
+                    ),
               ),
             );
           },
@@ -238,7 +308,16 @@ class _SeniorHomeContent extends ConsumerWidget {
             ref.invalidate(seniorHomeDataProvider);
             if (!context.mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Help request sent')),
+              SnackBar(
+                content: Text(
+                  tr(
+                    context,
+                    fr: 'Demande d’aide envoyée',
+                    en: 'Help request sent',
+                    ar: 'تم إرسال طلب المساعدة',
+                  ),
+                ),
+              ),
             );
           },
           onEmergencyCall: () => _launchEmergencyDialer(context),
@@ -277,15 +356,26 @@ class _SeniorHomeContent extends ConsumerWidget {
           children: [
             FilledButton.tonal(
               onPressed: () => context.push(AppRoutes.seniorHydration),
-              child: const Text('Hydration'),
+              child: Text(
+                tr(context, fr: 'Hydratation', en: 'Hydration', ar: 'الترطيب'),
+              ),
             ),
             FilledButton.tonal(
               onPressed: () => context.push(AppRoutes.seniorNutrition),
-              child: const Text('Meals'),
+              child: Text(
+                tr(context, fr: 'Repas', en: 'Meals', ar: 'الوجبات'),
+              ),
             ),
             FilledButton.tonal(
               onPressed: () => context.push(AppRoutes.seniorSummary),
-              child: const Text('Daily summary'),
+              child: Text(
+                tr(
+                  context,
+                  fr: 'Résumé du jour',
+                  en: 'Daily summary',
+                  ar: 'ملخص اليوم',
+                ),
+              ),
             ),
           ],
         ),
@@ -294,11 +384,20 @@ class _SeniorHomeContent extends ConsumerWidget {
   }
 
   Future<void> _launchEmergencyDialer(BuildContext context) async {
-    final uri = Uri.parse('tel:112');
+    final uri = Uri.parse('tel:198');
     final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
     if (!ok && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Could not open emergency dialer')),
+        SnackBar(
+          content: Text(
+            tr(
+              context,
+              fr: 'Impossible d’ouvrir l’appel d’urgence',
+              en: 'Could not open emergency dialer',
+              ar: 'تعذر فتح الاتصال بالطوارئ',
+            ),
+          ),
+        ),
       );
     }
   }
@@ -347,9 +446,24 @@ class _PrimaryActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = switch (checkInState.status) {
-      CheckInStatus.completed => 'You already checked in today.',
-      CheckInStatus.missed => 'Please confirm now.',
-      CheckInStatus.pending => 'Please confirm now.',
+      CheckInStatus.completed => tr(
+          context,
+          fr: 'Vous avez déjà confirmé aujourd’hui.',
+          en: 'You already checked in today.',
+          ar: 'لقد أكدت حضورك اليوم بالفعل.',
+        ),
+      CheckInStatus.missed => tr(
+          context,
+          fr: 'Veuillez confirmer maintenant.',
+          en: 'Please confirm now.',
+          ar: 'يرجى التأكيد الآن.',
+        ),
+      CheckInStatus.pending => tr(
+          context,
+          fr: 'Veuillez confirmer maintenant.',
+          en: 'Please confirm now.',
+          ar: 'يرجى التأكيد الآن.',
+        ),
     };
 
     return Column(
@@ -361,31 +475,61 @@ class _PrimaryActionCard extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.sm),
         BigAction(
-          label: 'I\'m okay',
-          subtitle: 'Send today\'s check-in',
+          label: tr(context, fr: 'Je vais bien', en: 'I\'m okay', ar: 'أنا بخير'),
+          subtitle: tr(
+            context,
+            fr: 'Envoyer le check-in du jour',
+            en: 'Send today\'s check-in',
+            ar: 'أرسل تأكيد اليوم',
+          ),
           icon: Icons.favorite_outline,
           onTap: onPrimaryAction,
         ),
         const SizedBox(height: AppSpacing.sm),
         BigAction(
-          label: 'I need help',
-          subtitle: 'Alert your family now',
+          label: tr(
+            context,
+            fr: 'J’ai besoin d’aide',
+            en: 'I need help',
+            ar: 'أحتاج مساعدة',
+          ),
+          subtitle: tr(
+            context,
+            fr: 'Alerter votre famille maintenant',
+            en: 'Alert your family now',
+            ar: 'نبه عائلتك الآن',
+          ),
           icon: Icons.call_outlined,
           tone: BigActionTone.destructive,
           onTap: onHelpAction,
         ),
         const SizedBox(height: AppSpacing.sm),
         BigAction(
-          label: 'Emergency call',
-          subtitle: 'Open 112 dialer now',
+          label: tr(
+            context,
+            fr: 'Appel d’urgence',
+            en: 'Emergency call',
+            ar: 'اتصال طوارئ',
+          ),
+          subtitle: tr(
+            context,
+            fr: 'Appeler le 198 maintenant',
+            en: 'Call 198 now',
+            ar: 'اتصل بـ 198 الآن',
+          ),
           icon: Icons.local_phone_outlined,
           tone: BigActionTone.destructive,
           onTap: onEmergencyCall,
         ),
         const SizedBox(height: AppSpacing.sm),
         BigAction(
-          label: 'Talk to Companion',
-          subtitle: 'Ask by voice',
+          label: tr(
+            context,
+            fr: 'Parler au Companion',
+            en: 'Talk to Companion',
+            ar: 'تحدث مع المرافق',
+          ),
+          subtitle: tr(context, fr: 'Par voix', en: 'Ask by voice', ar: 'بالصوت'),
           icon: Icons.mic_outlined,
           tone: BigActionTone.soft,
           onTap: onCompanion,
@@ -414,14 +558,27 @@ class _MedicationQuickCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Medication',
+            tr(context, fr: 'Médicament', en: 'Medication', ar: 'الدواء'),
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
             reminder == null
-                ? 'Next medication: no pending reminder.'
-                : 'Next medication: ${reminder!.plan.medicationName} at ${reminder!.slotLabel}.',
+                ? tr(
+                    context,
+                    fr: 'Prochain médicament : aucun rappel en attente.',
+                    en: 'Next medication: no pending reminder.',
+                    ar: 'الدواء التالي: لا يوجد تذكير معلق.',
+                  )
+                : tr(
+                    context,
+                    fr:
+                        'Prochain médicament : ${reminder!.plan.medicationName} à ${reminder!.slotLabel}.',
+                    en:
+                        'Next medication: ${reminder!.plan.medicationName} at ${reminder!.slotLabel}.',
+                    ar:
+                        'الدواء التالي: ${reminder!.plan.medicationName} عند ${reminder!.slotLabel}.',
+                  ),
           ),
           if (reminder != null &&
               reminder!.status == MedicationReminderStatus.pending) ...[
@@ -431,14 +588,23 @@ class _MedicationQuickCard extends StatelessWidget {
                 Expanded(
                   child: FilledButton(
                     onPressed: onTaken,
-                    child: const Text('Taken'),
+                    child: Text(
+                      tr(context, fr: 'Pris', en: 'Taken', ar: 'تم'),
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: OutlinedButton(
                     onPressed: onMissed,
-                    child: const Text('Not yet'),
+                    child: Text(
+                      tr(
+                        context,
+                        fr: 'Pas encore',
+                        en: 'Not yet',
+                        ar: 'ليس بعد',
+                      ),
+                    ),
                   ),
                 ),
               ],
