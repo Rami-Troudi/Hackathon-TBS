@@ -1,8 +1,8 @@
-# Senior Companion — Prototype (G0→G7, stabilized in G7.2)
+# Senior Companion — Final Prototype (G0→G8)
 
-This repository contains **Group 0 + Group 1 + Group 2 + Group 3 + Group 4 + Group 5 + Group 7** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, and a grounded AI companion/insights layer.
+This repository contains the final hackathon prototype through **G8**: a runnable local-first Flutter app with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, grounded AI companion/insights, notification wiring, native permission configuration, and final demo documentation.
 
-## Scope of this foundation (G0 + G1 + G2 + G3 + G4 + G5 + G7)
+## Scope of this prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7 + G8)
 
 Included:
 - Flutter mobile app bootstrap
@@ -59,6 +59,12 @@ Included:
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
   - `Hive` for structured entities (profiles, links, event records, medication plans, safe zones, runtime location state, future entities)
+- G8 final-mile delivery:
+  - event-driven local notifications for missed routines, incidents, emergencies, and safe-zone exits
+  - Android/iOS native permission declarations aligned with current prototype features
+  - Android APK demo runbook and final QA checklist
+  - final route/build/demo documentation cleanup
+  - app launch label set to **Senior Companion**
 
 Not included:
 - Backend/server setup
@@ -270,6 +276,10 @@ Group 7 adds a grounded AI layer above existing repositories/events/status/summa
   mode while continuing to operate from local persisted data.
 - Settings now provides explicit permission guidance for denied and permanently
   denied states, including an open-system-settings path.
+- Settings exposes notification permission and demo controls from both senior
+  and guardian roles so APK testers can recover/reset without hidden paths.
+- Event notifications are produced centrally from persisted domain events, not
+  from one-off widget code.
 
 ## Demo data reset flow (G1)
 
@@ -280,10 +290,33 @@ From **Settings**:
 
 ## Native platform note (important)
 
-`android/` and `ios/` are committed. If you regenerate platforms locally, keep
+`android/` and `ios/` are part of the final deliverable. If you regenerate platforms locally, keep
 permission declarations aligned with current prototype features:
 - Android: notifications + location in `android/app/src/main/AndroidManifest.xml`
 - iOS: in-use location usage description in `ios/Runner/Info.plist`
+
+## APK demo path
+
+For Android demo testing:
+
+```bash
+fvm flutter pub get
+fvm flutter build apk --debug
+```
+
+Install with:
+
+```bash
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+For a release-style local APK:
+
+```bash
+fvm flutter build apk --release
+```
+
+See `docs/demo_runbook_g8.md` for the recommended demo story and reset flow.
 
 ## Project structure
 
@@ -332,3 +365,5 @@ lib/
 - `docs/architecture.md` - architecture and extension guidance for next groups
 - `docs/release_readiness_g7_2.md` - current implementation status and non-goals
 - `docs/qa_test_matrix_g7_2.md` - manual QA matrix for demo/validation
+- `docs/demo_runbook_g8.md` - final Android demo setup, scenario, and fallback guide
+- `docs/final_qa_checklist_g8.md` - final handoff QA checklist

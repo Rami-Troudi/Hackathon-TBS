@@ -194,7 +194,7 @@ Run with verbose output:
 fvm flutter test --reporter expanded
 ```
 
-Current targeted tests (G2 + G3 + G4 + G5 + G7):
+Current targeted tests (G2 + G3 + G4 + G5 + G7 + G8):
 
 - `test/app/bootstrap/app_initializer_test.dart` (bootstrap init path)
 - `test/core/repositories/local_profile_seed_test.dart` (seeding/reset behavior)
@@ -229,6 +229,7 @@ Current targeted tests (G2 + G3 + G4 + G5 + G7):
 - `test/core/ai/status_explanation_service_test.dart` (status explanation grounding)
 - `test/features/companion/senior_companion_providers_test.dart` (senior companion provider flow)
 - `test/features/companion/guardian_insights_providers_test.dart` (guardian insights provider flow)
+- `test/core/notifications/app_event_notification_dispatcher_test.dart` (event-to-notification policy)
 
 ---
 
@@ -285,6 +286,7 @@ fvm flutter clean && fvm flutter pub get
 - **G5 wellbeing + safety modules.** Hydration, nutrition, safe-zone location, and daily summaries are deterministic and local-first only.
   No backend/cloud auth/data layer is introduced in G5.
 - **G7 AI safety and grounding.** Companion/insights responses are derived from local repositories/status/alerts/summaries. No diagnosis, no invented events, and deterministic fallback stays available when no provider is configured.
+- **G8 notification wiring.** Product notifications are triggered centrally from persisted events through `AppEventRecorder` + `AppEventNotificationDispatcher`. Widgets do not own alert notification policy.
 
 ---
 
@@ -342,3 +344,54 @@ Edit `ios/Runner/Info.plist` and ensure:
 
 Notification permissions are requested at runtime by the app; behavior can vary
 between simulator and physical device.
+
+---
+
+## Android APK demo builds (G8)
+
+### Debug APK for local testing
+
+```bash
+fvm flutter pub get
+fvm flutter build apk --debug
+```
+
+Output:
+
+```text
+build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Install on a connected Android device or emulator:
+
+```bash
+adb devices
+adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+### Release APK for a cleaner demo recording
+
+```bash
+fvm flutter build apk --release
+```
+
+Output:
+
+```text
+build/app/outputs/flutter-apk/app-release.apk
+```
+
+This prototype does not include Play Store signing or CI/CD release setup. Use
+the generated local APK for hackathon testing and video capture.
+
+### Demo-device assumptions
+
+- Android notification permission should be granted from **Settings** before
+  notification scenarios are recorded.
+- Location permission is only needed for the safe-zone prototype flow. The app
+  does not implement background geofencing.
+- External AI dart-defines are optional. If omitted, companion and guardian
+  insights use deterministic local fallback responses.
+- Before recording, run **Settings → Reset demo data**, complete onboarding, and
+  then use either senior flows or Developer Hub event buttons to prepare the
+  scenario.

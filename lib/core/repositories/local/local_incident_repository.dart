@@ -84,7 +84,7 @@ class LocalIncidentRepository implements IncidentRepository {
         seniorId: seniorId,
         happenedAt: happenedAt,
       ),
-      source: 'senior.incident',
+      source: 'senior.incident.request_help',
     );
   }
 

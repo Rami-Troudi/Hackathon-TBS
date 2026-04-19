@@ -1,6 +1,6 @@
-# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7)
+# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7 + G8)
 
-This document describes the technical architecture after **Group 7** and serves
+This document describes the technical architecture after **Group 8** and serves
 as the implementation guide for future milestones.
 
 Current deployment model remains **mobile-only and local-first**:
@@ -68,7 +68,7 @@ imports from features.
 | `events/` | Sealed `AppEvent` hierarchy, `AppEventBus`, persisted event mapping, status engine |
 | `logging/` | `AppLogger` abstraction + `DebugAppLogger` |
 | `networking/` | Dio client + `ApiClient.guard()` + error mapping |
-| `notifications/` | `NotificationService` abstraction + local implementation |
+| `notifications/` | `NotificationService` abstraction, local implementation, event notification dispatcher |
 | `permissions/` | `PermissionService` abstraction + implementation |
 | `repositories/` | Repository interfaces + `local/` implementations |
 | `storage/` | SharedPreferences storage + Hive structured storage bootstrap |
@@ -340,33 +340,50 @@ class GuardianDashboardNotifier extends AutoDisposeNotifier<DashboardState> {
 | `warning` | Something needs attention (missed check-in, missed medication) |
 | `critical` | Immediate action required (unresolved incident, emergency) |
 
-### Usage from a feature
+### Product event notification wiring
 
-```dart
-final notifications = ref.read(notificationServiceProvider);
+G8 wires notifications from the canonical event path:
 
-// Routine reminder
-await notifications.showInfo(
-  title: 'Medication reminder',
-  body: 'Time to take Aspirin',
-);
-
-// Guardian alert
-await notifications.showCritical(
-  title: 'Action required',
-  body: 'Ahmed has not checked in for 4 hours',
-);
+```text
+Feature action
+  -> AppEventRecorder.publishAndPersist()
+  -> EventRepository.addAppEvent()
+  -> AppEventNotificationDispatcher.dispatch()
+  -> NotificationService.showWarning/showCritical()
 ```
+
+This keeps notification policy out of widgets and aligned with deterministic
+event/status logic.
+
+Current local notification triggers:
+
+| Event | Notification level |
+|---|---|
+| `checkInMissed` | warning |
+| `medicationMissed` | warning |
+| `hydrationMissed` | warning |
+| `mealMissed` | warning |
+| `incidentSuspected` | warning |
+| `incidentConfirmed` | critical, except when an emergency event immediately follows |
+| `emergencyTriggered` | critical |
+| `safeZoneExited` | warning |
+| `guardianAlertGenerated` | mapped from alert level |
+
+Completion/clear events do not produce notifications to avoid spam.
 
 ### Permission handling
 
 The notification service checks permission before showing each notification.
 If permission is not granted, the notification is silently skipped with a log
-warning. Request permission explicitly during onboarding:
+warning. Request permission explicitly from Settings:
 
 ```dart
 await ref.read(notificationServiceProvider).requestPermission();
 ```
+
+The dispatcher also checks the active profile's persisted notification setting.
+If there is no active session, notifications default to enabled for developer
+scenario testing.
 
 ---
 

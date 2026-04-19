@@ -1,5 +1,8 @@
 # QA Test Matrix — G7.2
 
+Historical QA matrix for the G7.2 stabilization state. For final G8 handoff,
+use `docs/final_qa_checklist_g8.md`.
+
 Manual test matrix for implemented production flows.  
 Run on at least one Android target and one iOS target when available.
 

@@ -1,6 +1,8 @@
 # Release Readiness — G7.2 Stabilization
 
-This document is the single source of truth for current project status before G8.
+Historical stabilization snapshot before G8. For final delivery, use
+`docs/demo_runbook_g8.md` and `docs/final_qa_checklist_g8.md` as the active
+handoff documents.
 
 ## 1. Implemented scope through G7
 

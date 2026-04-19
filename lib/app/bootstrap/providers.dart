@@ -19,6 +19,7 @@ import 'package:senior_companion/core/events/status_engine.dart';
 import 'package:senior_companion/core/logging/app_logger.dart';
 import 'package:senior_companion/core/networking/api_client.dart';
 import 'package:senior_companion/core/networking/dio_provider.dart';
+import 'package:senior_companion/core/notifications/app_event_notification_dispatcher.dart';
 import 'package:senior_companion/core/notifications/notification_service.dart';
 import 'package:senior_companion/core/permissions/permission_service.dart';
 import 'package:senior_companion/core/repositories/active_senior_resolver.dart';
@@ -54,6 +55,7 @@ import 'package:senior_companion/core/repositories/settings_repository.dart';
 import 'package:senior_companion/core/repositories/summary_repository.dart';
 import 'package:senior_companion/core/storage/hive_initializer.dart';
 import 'package:senior_companion/core/storage/storage_service.dart';
+import 'package:senior_companion/shared/models/app_role.dart';
 
 final appConfigProvider = Provider<AppConfig>(
   (_) => throw UnimplementedError(
@@ -180,6 +182,28 @@ final appEventRecorderProvider = Provider<AppEventRecorder>(
   (ref) => AppEventRecorder(
     eventBus: ref.watch(appEventBusProvider),
     eventRepository: ref.watch(eventRepositoryProvider),
+    afterPersist: ref.watch(appEventNotificationDispatcherProvider).dispatch,
+  ),
+);
+
+final appEventNotificationDispatcherProvider =
+    Provider<AppEventNotificationDispatcher>(
+  (ref) => AppEventNotificationDispatcher(
+    notificationService: ref.watch(notificationServiceProvider),
+    logger: ref.watch(appLoggerProvider),
+    notificationsEnabled: () async {
+      final session = await ref.read(appSessionRepositoryProvider).getSession();
+      if (session == null) return true;
+      final settingsRepository = ref.read(settingsRepositoryProvider);
+      return switch (session.activeRole) {
+        AppRole.senior =>
+          (await settingsRepository.getSeniorSettings(session.activeProfileId))
+              .notificationsEnabled,
+        AppRole.guardian => (await settingsRepository
+                .getGuardianSettings(session.activeProfileId))
+            .notificationsEnabled,
+      };
+    },
   ),
 );
 

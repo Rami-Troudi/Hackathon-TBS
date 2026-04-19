@@ -440,7 +440,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final shellRole =
         _isGuardianRole ? AppShellRole.guardian : AppShellRole.shared;
-    final showAdvancedSections = !_isSeniorRole;
+    final showGuardianPermissionTools = !_isSeniorRole;
     final sessionDescription = _activeSession == null
         ? 'No active local session'
         : _isSeniorRole
@@ -459,20 +459,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           Gaps.v16,
           ..._buildRoleSettings(),
-          if (showAdvancedSections) ...[
-            Gaps.v16,
-            FeaturePlaceholderCard(
-              icon: Icons.notifications_active_outlined,
-              title: 'Notification permission',
-              description:
-                  permissionUiStateFor(_notificationPermissionStatus).detail,
-            ),
-            Gaps.v8,
-            _PermissionActionRow(
-              state: permissionUiStateFor(_notificationPermissionStatus),
-              onRequest: _requestNotificationPermission,
-              onOpenSettings: _openSystemSettings,
-            ),
+          Gaps.v16,
+          FeaturePlaceholderCard(
+            icon: Icons.notifications_active_outlined,
+            title: 'Notification permission',
+            description:
+                permissionUiStateFor(_notificationPermissionStatus).detail,
+          ),
+          Gaps.v8,
+          _PermissionActionRow(
+            state: permissionUiStateFor(_notificationPermissionStatus),
+            onRequest: _requestNotificationPermission,
+            onOpenSettings: _openSystemSettings,
+          ),
+          if (showGuardianPermissionTools) ...[
             Gaps.v16,
             FeaturePlaceholderCard(
               icon: Icons.my_location_outlined,
@@ -508,30 +508,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 _setConnectivityState(selection.first);
               },
             ),
-            Gaps.v24,
-            Text('Developer tools',
-                style: Theme.of(context).textTheme.titleMedium),
-            Gaps.v8,
-            ElevatedButton(
-              onPressed: _switchRoleForTesting,
-              child: const Text('Switch Role for Testing'),
-            ),
-            Gaps.v8,
-            OutlinedButton(
-              onPressed: _clearSession,
-              child: const Text('Clear Session'),
-            ),
-            Gaps.v8,
-            OutlinedButton(
-              onPressed: _reseedDemoData,
-              child: const Text('Reseed Demo Data'),
-            ),
-            Gaps.v8,
-            OutlinedButton(
-              onPressed: _resetDemoData,
-              child: const Text('Reset Demo Data'),
-            ),
           ],
+          Gaps.v24,
+          Text('Demo controls', style: Theme.of(context).textTheme.titleMedium),
+          Gaps.v8,
+          ElevatedButton(
+            onPressed: _switchRoleForTesting,
+            child: const Text('Switch role for testing'),
+          ),
+          Gaps.v8,
+          OutlinedButton(
+            onPressed: _clearSession,
+            child: const Text('Clear session'),
+          ),
+          Gaps.v8,
+          OutlinedButton(
+            onPressed: _reseedDemoData,
+            child: const Text('Reseed demo data'),
+          ),
+          Gaps.v8,
+          OutlinedButton(
+            onPressed: _resetDemoData,
+            child: const Text('Reset demo data'),
+          ),
         ],
       ),
     );
