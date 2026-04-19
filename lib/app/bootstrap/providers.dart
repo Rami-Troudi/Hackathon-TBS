@@ -2,6 +2,14 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_router.dart';
+import 'package:senior_companion/core/ai/ai_assistant_repository.dart';
+import 'package:senior_companion/core/ai/ai_context_builder.dart';
+import 'package:senior_companion/core/ai/ai_fallback_service.dart';
+import 'package:senior_companion/core/ai/ai_prompt_builder.dart';
+import 'package:senior_companion/core/ai/ai_provider_adapter.dart';
+import 'package:senior_companion/core/ai/ai_response_parser.dart';
+import 'package:senior_companion/core/ai/alert_explanation_service.dart';
+import 'package:senior_companion/core/ai/status_explanation_service.dart';
 import 'package:senior_companion/core/config/app_config.dart';
 import 'package:senior_companion/core/events/app_event_bus.dart';
 import 'package:senior_companion/core/events/app_event_mapper.dart';
@@ -226,6 +234,70 @@ final summaryRepositoryProvider = Provider<SummaryRepository>(
   (ref) => LocalSummaryRepository(
     eventRepository: ref.watch(eventRepositoryProvider),
     statusEngine: ref.watch(statusEngineProvider),
+  ),
+);
+
+final statusExplanationServiceProvider = Provider<StatusExplanationService>(
+  (_) => const StatusExplanationService(),
+);
+
+final alertExplanationServiceProvider = Provider<AlertExplanationService>(
+  (_) => const AlertExplanationService(),
+);
+
+final aiContextBuilderProvider = Provider<AiContextBuilder>(
+  (ref) => AiContextBuilder(
+    activeSeniorResolver: ref.watch(activeSeniorResolverProvider),
+    appSessionRepository: ref.watch(appSessionRepositoryProvider),
+    profileRepository: ref.watch(profileRepositoryProvider),
+    settingsRepository: ref.watch(settingsRepositoryProvider),
+    summaryRepository: ref.watch(summaryRepositoryProvider),
+    dashboardRepository: ref.watch(dashboardRepositoryProvider),
+    checkInRepository: ref.watch(checkInRepositoryProvider),
+    medicationRepository: ref.watch(medicationRepositoryProvider),
+    hydrationRepository: ref.watch(hydrationRepositoryProvider),
+    nutritionRepository: ref.watch(nutritionRepositoryProvider),
+    safeZoneRepository: ref.watch(safeZoneRepositoryProvider),
+    incidentRepository: ref.watch(incidentRepositoryProvider),
+    guardianAlertRepository: ref.watch(guardianAlertRepositoryProvider),
+    eventRepository: ref.watch(eventRepositoryProvider),
+  ),
+);
+
+final aiPromptBuilderProvider = Provider<AiPromptBuilder>(
+  (_) => const AiPromptBuilder(),
+);
+
+final aiResponseParserProvider = Provider<AiResponseParser>(
+  (_) => const AiResponseParser(),
+);
+
+final aiProviderAdapterProvider = Provider<AiProviderAdapter>((ref) {
+  final config = ref.watch(appConfigProvider);
+  if (!config.hasExternalAi) {
+    return const NullAiProviderAdapter();
+  }
+  return OpenAiCompatibleProviderAdapter(
+    dio: ref.watch(dioProvider),
+    config: config,
+  );
+});
+
+final aiFallbackServiceProvider = Provider<AiFallbackService>(
+  (ref) => AiFallbackService(
+    statusExplanationService: ref.watch(statusExplanationServiceProvider),
+    alertExplanationService: ref.watch(alertExplanationServiceProvider),
+  ),
+);
+
+final aiAssistantRepositoryProvider = Provider<AiAssistantRepository>(
+  (ref) => LocalAiAssistantRepository(
+    contextBuilder: ref.watch(aiContextBuilderProvider),
+    promptBuilder: ref.watch(aiPromptBuilderProvider),
+    providerAdapter: ref.watch(aiProviderAdapterProvider),
+    responseParser: ref.watch(aiResponseParserProvider),
+    fallbackService: ref.watch(aiFallbackServiceProvider),
+    logger: ref.watch(appLoggerProvider),
   ),
 );
 

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/features/check_in/check_in_screen.dart';
+import 'package:senior_companion/features/companion/guardian_insights_screen.dart';
+import 'package:senior_companion/features/companion/senior_companion_screen.dart';
 import 'package:senior_companion/features/onboarding/profile_selection_screen.dart';
 import 'package:senior_companion/features/onboarding/role_selection_screen.dart';
 import 'package:senior_companion/features/guardian/guardian_alerts_screen.dart';
@@ -91,6 +93,11 @@ GoRouter buildAppRouter(Ref ref) {
         builder: (_, __) => const SeniorSummaryScreen(),
       ),
       GoRoute(
+        path: AppRoutes.seniorCompanion,
+        name: 'senior-companion',
+        builder: (_, __) => const SeniorCompanionScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.guardianHome,
         name: 'guardian-home',
         builder: (_, __) => const GuardianHomeScreen(),
@@ -144,6 +151,11 @@ GoRouter buildAppRouter(Ref ref) {
         path: AppRoutes.guardianSummary,
         name: 'guardian-summary',
         builder: (_, __) => const GuardianSummaryScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.guardianInsights,
+        name: 'guardian-insights',
+        builder: (_, __) => const GuardianInsightsScreen(),
       ),
       GoRoute(
         path: AppRoutes.settings,

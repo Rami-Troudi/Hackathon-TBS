@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:senior_companion/features/incident/incident_providers.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
-import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/incident_flow_state.dart';
 import 'package:senior_companion/shared/widgets/app_scaffold_shell.dart';
@@ -30,9 +29,9 @@ class IncidentConfirmationScreen extends ConsumerWidget {
 
           final statusLabel = switch (data.flowState.status) {
             IncidentFlowStatus.clear => 'No active incident',
-            IncidentFlowStatus.suspected => 'Suspicious incident under review',
-            IncidentFlowStatus.confirmed => 'Incident confirmed',
-            IncidentFlowStatus.emergency => 'Emergency state triggered',
+            IncidentFlowStatus.suspected => 'Please confirm if you are okay',
+            IncidentFlowStatus.confirmed => 'Help is being prepared',
+            IncidentFlowStatus.emergency => 'Emergency support triggered',
           };
 
           return ListView(
@@ -59,11 +58,6 @@ class IncidentConfirmationScreen extends ConsumerWidget {
                       'Use these actions to confirm if everything is okay or request urgent help.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    Gaps.v8,
-                    Text(
-                      'Open suspected: ${data.flowState.openSuspectedIncidents} • Open confirmed: ${data.flowState.openConfirmedIncidents}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
                   ],
                 ),
               ),
@@ -77,67 +71,16 @@ class IncidentConfirmationScreen extends ConsumerWidget {
               ),
               Gaps.v8,
               BigAction(
-                label: 'Something happened',
-                subtitle: 'Confirm the incident',
-                icon: Icons.gpp_maybe_outlined,
-                tone: BigActionTone.soft,
-                onTap: () => _confirmIncident(context, ref, seniorId),
-              ),
-              Gaps.v8,
-              BigAction(
                 label: 'I\'m okay',
                 subtitle: 'Clear the incident prompt',
                 icon: Icons.verified_outlined,
                 tone: BigActionTone.primary,
                 onTap: () => _dismissIncident(context, ref, seniorId),
               ),
-              Gaps.v8,
-              TextButton.icon(
-                onPressed: () => _reportSuspicious(context, ref, seniorId),
-                icon: const Icon(Icons.report_gmailerrorred_outlined),
-                label: const Text('Something seems wrong'),
-              ),
-              Gaps.v16,
-              Text(
-                'Recent incident activity',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              Gaps.v8,
-              if (data.recentIncidentEvents.isEmpty)
-                Text(
-                  'No incident events yet.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                )
-              else
-                ...data.recentIncidentEvents.map(
-                  (event) => Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    child: Text(
-                      '${event.type.timelineLabel} • ${_formatTime(event.happenedAt)}',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                ),
             ],
           );
         },
       ),
-    );
-  }
-
-  Future<void> _reportSuspicious(
-    BuildContext context,
-    WidgetRef ref,
-    String seniorId,
-  ) async {
-    await ref
-        .read(incidentRepositoryProvider)
-        .reportSuspiciousIncident(seniorId);
-    ref.invalidate(incidentDataProvider);
-    ref.invalidate(seniorHomeDataProvider);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Suspicious incident recorded')),
     );
   }
 
@@ -155,20 +98,6 @@ class IncidentConfirmationScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _confirmIncident(
-    BuildContext context,
-    WidgetRef ref,
-    String seniorId,
-  ) async {
-    await ref.read(incidentRepositoryProvider).confirmIncident(seniorId);
-    ref.invalidate(incidentDataProvider);
-    ref.invalidate(seniorHomeDataProvider);
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Incident confirmed')),
-    );
-  }
-
   Future<void> _triggerEmergency(
     BuildContext context,
     WidgetRef ref,
@@ -181,12 +110,5 @@ class IncidentConfirmationScreen extends ConsumerWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Emergency flow triggered')),
     );
-  }
-
-  String _formatTime(DateTime timestamp) {
-    final local = timestamp.toLocal();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
   }
 }

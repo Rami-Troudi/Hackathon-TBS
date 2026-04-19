@@ -1,8 +1,8 @@
-# Senior Companion - Group 5 Prototype (Settings + Wellbeing + Safety Expansion)
+# Senior Companion - Group 7 Prototype (AI Companion + Smart Insights)
 
-This repository contains **Group 0 + Group 1 + Group 2 + Group 3 + Group 4 + Group 5** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, and deterministic daily summaries.
+This repository contains **Group 0 + Group 1 + Group 2 + Group 3 + Group 4 + Group 5 + Group 7** of the Senior Companion mobile prototype: a runnable local-first foundation with onboarding/session flow, structured local entity storage, persisted event/status core, real senior/guardian monitoring flows, expanded settings, wellbeing modules, safe-zone prototype logic, deterministic daily summaries, and a grounded AI companion/insights layer.
 
-## Scope of this foundation (G0 + G1 + G2 + G3 + G4 + G5)
+## Scope of this foundation (G0 + G1 + G2 + G3 + G4 + G5 + G7)
 
 Included:
 - Flutter mobile app bootstrap
@@ -45,6 +45,17 @@ Included:
   - deterministic summaries (`/senior/summary`, `/guardian/summary`)
   - guardian hydration/nutrition monitoring (`/guardian/hydration`, `/guardian/nutrition`)
   - expanded guardian alert rules for hydration/nutrition misses and unresolved safe-zone exits
+- G7 AI companion + smart insights expansion:
+  - senior companion screen (`/senior/companion`) with grounded Q&A and suggestion chips
+  - guardian insights screen (`/guardian/insights`) with alert/status explanations and contextual guidance
+  - AI orchestration layer in `core/ai`:
+    - context builder from real local repositories
+    - prompt builder
+    - provider adapter abstraction
+    - deterministic fallback service (works with no API key/provider)
+    - alert/status explanation services
+  - optional external provider mode via dart-defines (no backend required)
+  - deterministic repositories remain source of truth; AI only explains/rephrases/suggests
 - Explicit local storage policy:
   - `SharedPreferences` for preferences/flags/light session only
   - `Hive` for structured entities (profiles, links, event records, medication plans, safe zones, runtime location state, future entities)
@@ -53,7 +64,7 @@ Not included:
 - Backend/server setup
 - Docker/devops
 - Database infrastructure
-- AI/chatbot implementation
+- mandatory backend/cloud AI infrastructure
 - Full business-domain features
 
 ## Stack
@@ -95,6 +106,19 @@ fvm flutter run --dart-define=APP_ENV=dev
 ```
 
 Valid values: `dev`, `staging`, `prod`.
+
+Optional AI configuration (G7 external mode):
+
+```bash
+fvm flutter run \
+  --dart-define=APP_ENV=dev \
+  --dart-define=AI_PROVIDER=openai_compatible \
+  --dart-define=AI_API_KEY=your_key_here \
+  --dart-define=AI_MODEL=gpt-4o-mini \
+  --dart-define=AI_BASE_URL=https://api.openai.com/v1
+```
+
+If AI provider settings are omitted, the app uses deterministic local fallback responses.
 
 ## Onboarding + session flow (G1)
 
@@ -212,6 +236,31 @@ Group 5 extends the product into a fuller daily companion, while staying local-f
   - `/guardian/nutrition`
   - `/guardian/location`
   - `/guardian/summary`
+
+## G7 AI Companion + Smart Insights
+
+Group 7 adds a grounded AI layer above existing repositories/events/status/summaries:
+
+- **Senior Companion** (`/senior/companion`)
+  - calm, simple assistant for “what should I do now?”, reminders left, status, and day summary
+- **Guardian Insights** (`/guardian/insights`)
+  - concise assistant for “what changed?”, “what needs attention?”, alert explanations, and adherence snapshots
+- **Grounding policy**
+  - repositories, status engine, alerts, and deterministic summaries remain factual source of truth
+  - AI output is explanation/guidance only
+- **Fallback mode**
+  - fully functional without any external model configuration
+  - deterministic responses built from real local app context
+- **External mode (optional)**
+  - provider adapter supports OpenAI-compatible chat completions when configured
+  - provider failures automatically degrade to deterministic fallback
+
+### G7 routes
+
+- Senior:
+  - `/senior/companion`
+- Guardian:
+  - `/guardian/insights`
 
 ## Demo data reset flow (G1)
 

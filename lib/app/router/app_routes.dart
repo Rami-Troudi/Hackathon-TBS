@@ -12,6 +12,7 @@ class AppRoutes {
   static const seniorHydration = '/senior/hydration';
   static const seniorNutrition = '/senior/nutrition';
   static const seniorSummary = '/senior/summary';
+  static const seniorCompanion = '/senior/companion';
   static const guardianHome = '/guardian';
   static const guardianAlerts = '/guardian/alerts';
   static const guardianTimeline = '/guardian/timeline';
@@ -23,6 +24,7 @@ class AppRoutes {
   static const guardianNutrition = '/guardian/nutrition';
   static const guardianLocation = '/guardian/location';
   static const guardianSummary = '/guardian/summary';
+  static const guardianInsights = '/guardian/insights';
   static const settings = '/settings';
 
   static String onboardingProfileForRole(AppRole role) {

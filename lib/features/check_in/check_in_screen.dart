@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
-import 'package:senior_companion/app/router/app_routes.dart';
 import 'package:senior_companion/app/theme/app_theme.dart';
-import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/features/check_in/check_in_providers.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
@@ -35,7 +32,7 @@ class CheckInScreen extends ConsumerWidget {
           return ListView(
             children: [
               Text(
-                'How are you feeling now?',
+                'Please confirm your status',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Gaps.v8,
@@ -54,43 +51,6 @@ class CheckInScreen extends ConsumerWidget {
                 icon: Icons.call_outlined,
                 tone: BigActionTone.destructive,
                 onTap: () => _needHelp(context, ref, seniorId),
-              ),
-              Gaps.v8,
-              TextButton(
-                onPressed: () => context.push(AppRoutes.incident),
-                child: const Text('Open detailed help flow'),
-              ),
-              Gaps.v16,
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Recent check-ins',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Gaps.v8,
-                      if (data.recentCheckIns.isEmpty)
-                        Text(
-                          'No check-in events yet.',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        )
-                      else
-                        ...data.recentCheckIns.map(
-                          (event) => Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: Text(
-                              '${event.type.timelineLabel} • ${_formatTime(event.happenedAt)}',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
               ),
             ],
           );
@@ -132,13 +92,6 @@ class CheckInScreen extends ConsumerWidget {
       const SnackBar(content: Text('Help request recorded')),
     );
   }
-
-  String _formatTime(DateTime timestamp) {
-    final local = timestamp.toLocal();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
-  }
 }
 
 class _StateBanner extends StatelessWidget {
@@ -169,11 +122,11 @@ class _StateBanner extends StatelessWidget {
         '${_formatTime(state.windowStart)} - ${_formatTime(state.windowEnd)}';
     final detail = switch (state.status) {
       CheckInStatus.pending =>
-        'Window: $windowRange. Please confirm your status.',
+        'Window: $windowRange. Tap "I\'m okay" to confirm.',
       CheckInStatus.completed =>
         'Completed at ${_formatTime(state.completedAt ?? DateTime.now())}.',
       CheckInStatus.missed =>
-        'Window $windowRange was missed. You can still check in now.',
+        'Window $windowRange was missed. You can still tap "I\'m okay" now.',
     };
 
     return AppCard(

@@ -29,14 +29,14 @@ class HydrationScreen extends ConsumerWidget {
           return ListView(
             children: [
               Text(
-                'Stay hydrated today',
+                'Hydration today',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Gaps.v8,
               AppCard(
                 tone: AppCardTone.sage,
                 child: Text(
-                  'Completed ${data.state.completedCount}/${data.state.dailyGoalCompletions} • Missed ${data.state.missedCount} • Pending ${data.state.pendingCount}',
+                  'You completed ${data.state.completedCount} of ${data.state.dailyGoalCompletions} hydration reminders.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
@@ -119,9 +119,9 @@ class _HydrationSlotCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusLabel = switch (slot.status) {
-      HydrationSlotStatus.pending => 'Pending',
-      HydrationSlotStatus.completed => 'Completed',
-      HydrationSlotStatus.missed => 'Missed',
+      HydrationSlotStatus.pending => 'To do',
+      HydrationSlotStatus.completed => 'Done',
+      HydrationSlotStatus.missed => 'Skipped',
     };
     return AppCard(
       child: Column(
@@ -142,7 +142,7 @@ class _HydrationSlotCard extends StatelessWidget {
             Gaps.v8,
             OutlinedButton(
               onPressed: onSkip,
-              child: const Text('Skip'),
+              child: const Text('Not now'),
             ),
           ] else
             Text(

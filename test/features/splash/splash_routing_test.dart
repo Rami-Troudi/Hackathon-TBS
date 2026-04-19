@@ -240,6 +240,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 150));
     await tester.pumpAndSettle();
 
-    expect(find.text('Senior Home'), findsOneWidget);
+    expect(find.text('Today'), findsOneWidget);
   });
 }

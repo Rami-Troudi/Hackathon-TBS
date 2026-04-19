@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:senior_companion/app/bootstrap/providers.dart';
 import 'package:senior_companion/app/router/app_routes.dart';
-import 'package:senior_companion/core/events/persisted_event_record.dart';
 import 'package:senior_companion/features/senior/senior_home_providers.dart';
 import 'package:senior_companion/shared/constants/app_spacing.dart';
 import 'package:senior_companion/shared/models/check_in_state.dart';
@@ -24,18 +23,13 @@ class SeniorHomeScreen extends ConsumerWidget {
     final seniorHomeAsync = ref.watch(seniorHomeDataProvider);
 
     return AppScaffoldShell(
-      title: 'Senior Home',
+      title: 'Today',
       role: AppShellRole.senior,
       actions: [
         IconButton(
           onPressed: () => context.push(AppRoutes.settings),
           icon: const Icon(Icons.settings_outlined),
           tooltip: 'Settings',
-        ),
-        IconButton(
-          onPressed: () => context.push(AppRoutes.home),
-          icon: const Icon(Icons.developer_mode_outlined),
-          tooltip: 'Developer Hub',
         ),
       ],
       child: seniorHomeAsync.when(
@@ -59,56 +53,39 @@ class _SeniorHomeContent extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final seniorId = data.activeSeniorId;
     if (seniorId == null) {
-      return const Center(
-        child: Text(
-            'No active senior context. Switch to a senior profile in Settings.'),
+      return const EmptyStateBlock(
+        title: 'No active senior profile',
+        description: 'Open settings to switch to a senior profile.',
+        icon: Icons.person_off_outlined,
       );
     }
+
     final settings = data.settings;
     final profileName = data.profile?.displayName ?? 'there';
     final greetingStyle = settings.largeTextEnabled
         ? Theme.of(context).textTheme.headlineSmall?.copyWith(fontSize: 30)
         : Theme.of(context).textTheme.headlineSmall;
-    final isSimplified = settings.simplifiedModeEnabled;
     final greeting = _localizedGreeting(
       settings.languageCode,
       profileName: profileName,
     );
-    final supportLine = _localizedSupportLine(
-      settings.languageCode,
-      emergencyContactLabel: settings.emergencyContactLabel,
-    );
-    final reminderIntensityLabel =
-        _reminderIntensityLabel(settings.reminderIntensity.name);
+    final supportLine = settings.simplifiedModeEnabled
+        ? _localizedSimpleSupportLine(settings.languageCode)
+        : _localizedSupportLine(
+            settings.languageCode,
+            emergencyContactLabel: settings.emergencyContactLabel,
+          );
 
     return ListView(
       children: [
-        Text(
-          greeting,
-          style: greetingStyle,
-        ),
+        Text(greeting, style: greetingStyle),
         Gaps.v4,
         Text(
           supportLine,
           style: Theme.of(context).textTheme.bodyMedium,
         ),
-        Gaps.v4,
-        Text(
-          'Reminder intensity: $reminderIntensityLabel',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
         Gaps.v16,
-        _StatusCard(
-          summary: data.summary,
-          highContrast: settings.highContrastEnabled,
-        ),
-        Gaps.v16,
-        _WellbeingSnapshotCard(
-          hydrationState: data.hydrationState,
-          nutritionState: data.nutritionState,
-        ),
-        Gaps.v8,
-        _SafeZoneStatusCard(status: data.safeZoneStatus),
+        _StatusCard(summary: data.summary),
         Gaps.v16,
         _PrimaryActionCard(
           checkInState: data.checkInState,
@@ -116,54 +93,19 @@ class _SeniorHomeContent extends ConsumerWidget {
           onHelpAction: () => _needHelp(context, ref, seniorId),
         ),
         Gaps.v16,
-        _NextReminderCard(
-          reminder: data.nextReminder,
-          reminderIntensityLabel: reminderIntensityLabel,
+        _TodayRoutineCard(
+          checkInState: data.checkInState,
+          nextReminder: data.nextReminder,
+          hydrationState: data.hydrationState,
+          nutritionState: data.nutritionState,
+          safeZoneStatus: data.safeZoneStatus,
+          simplifiedModeEnabled: settings.simplifiedModeEnabled,
+          onMedication: () => context.push(AppRoutes.medication),
+          onHydration: () => context.push(AppRoutes.seniorHydration),
+          onNutrition: () => context.push(AppRoutes.seniorNutrition),
+          onSummary: () => context.push(AppRoutes.seniorSummary),
+          onCompanion: () => context.push(AppRoutes.seniorCompanion),
         ),
-        Gaps.v16,
-        Text(
-          'Daily tools',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        Gaps.v8,
-        Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            _SeniorToolButton(
-              icon: Icons.check_circle_outline,
-              label: 'Check-in',
-              onTap: () => context.push(AppRoutes.checkIn),
-            ),
-            _SeniorToolButton(
-              icon: Icons.medication_outlined,
-              label: 'Medication',
-              onTap: () => context.push(AppRoutes.medication),
-            ),
-            _SeniorToolButton(
-              icon: Icons.warning_amber_outlined,
-              label: 'Help',
-              onTap: () => context.push(AppRoutes.incident),
-            ),
-            _SeniorToolButton(
-              icon: Icons.local_drink_outlined,
-              label: 'Hydration',
-              onTap: () => context.push(AppRoutes.seniorHydration),
-            ),
-            _SeniorToolButton(
-              icon: Icons.restaurant_outlined,
-              label: 'Nutrition',
-              onTap: () => context.push(AppRoutes.seniorNutrition),
-            ),
-            _SeniorToolButton(
-              icon: Icons.summarize_outlined,
-              label: 'Summary',
-              onTap: () => context.push(AppRoutes.seniorSummary),
-            ),
-          ],
-        ),
-        Gaps.v16,
-        if (!isSimplified) _RecentActivityCard(events: data.recentEvents),
       ],
     );
   }
@@ -185,19 +127,20 @@ class _SeniorHomeContent extends ConsumerWidget {
   }) {
     return switch (languageCode) {
       'ar' =>
-        'Your daily support is ready. $emergencyContactLabel is your emergency contact.',
+        'Your support actions are below. In an emergency, contact $emergencyContactLabel.',
       'en' =>
-        'Today\'s support in one place. $emergencyContactLabel is your emergency contact.',
+        'Your support actions are below. In an emergency, contact $emergencyContactLabel.',
       _ =>
-        'Votre soutien quotidien est prêt. $emergencyContactLabel est votre contact d\'urgence.',
+        'Vos actions essentielles sont ci-dessous. En cas d’urgence, contactez $emergencyContactLabel.',
     };
   }
 
-  String _reminderIntensityLabel(String raw) {
-    return switch (raw) {
-      'low' => 'Low',
-      'high' => 'High',
-      _ => 'Normal',
+  String _localizedSimpleSupportLine(String languageCode) {
+    return switch (languageCode) {
+      'ar' => 'Use the two large buttons below to check in or ask for help.',
+      'en' => 'Use the two large buttons below to check in or ask for help.',
+      _ =>
+        'Utilisez les deux grands boutons ci-dessous pour confirmer ou demander de l’aide.',
     };
   }
 
@@ -240,76 +183,9 @@ class _SeniorHomeContent extends ConsumerWidget {
 class _StatusCard extends StatelessWidget {
   const _StatusCard({
     required this.summary,
-    required this.highContrast,
   });
 
   final DashboardSummary summary;
-  final bool highContrast;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      tone: highContrast ? AppCardTone.danger : AppCardTone.surface,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                StatusPill(status: summary.globalStatus),
-                Gaps.v12,
-                Text(
-                  summary.globalStatus.description,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WellbeingSnapshotCard extends StatelessWidget {
-  const _WellbeingSnapshotCard({
-    required this.hydrationState,
-    required this.nutritionState,
-  });
-
-  final HydrationState hydrationState;
-  final NutritionState nutritionState;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      tone: AppCardTone.sage,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Wellbeing today',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Gaps.v8,
-          Text(
-            'Hydration: ${hydrationState.completedCount}/${hydrationState.dailyGoalCompletions} completed',
-          ),
-          Text(
-            'Meals: ${nutritionState.completedCount}/${nutritionState.slots.length} completed',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SafeZoneStatusCard extends StatelessWidget {
-  const _SafeZoneStatusCard({
-    required this.status,
-  });
-
-  final SafeZoneStatus status;
 
   @override
   Widget build(BuildContext context) {
@@ -317,27 +193,15 @@ class _SafeZoneStatusCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          StatusPill(status: summary.globalStatus),
+          Gaps.v12,
           Text(
-            'Safe status',
-            style: Theme.of(context).textTheme.titleMedium,
+            summary.globalStatus.description,
+            style: Theme.of(context).textTheme.bodyLarge,
           ),
-          Gaps.v4,
-          Text(status.zoneLabel),
-          if (status.location != null)
-            Text(
-              'Updated ${_formatTime(status.location!.updatedAt)}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
         ],
       ),
     );
-  }
-
-  String _formatTime(DateTime timestamp) {
-    final local = timestamp.toLocal();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
   }
 }
 
@@ -355,18 +219,14 @@ class _PrimaryActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final subtitle = switch (checkInState.status) {
-      CheckInStatus.completed =>
-        'Completed at ${_formatTime(checkInState.completedAt)}',
-      CheckInStatus.missed =>
-        'Missed ${checkInState.windowLabel}. You can still check in now.',
-      CheckInStatus.pending =>
-        'Pending in ${checkInState.windowLabel}. Please confirm your status.',
+      CheckInStatus.completed => 'You already checked in today.',
+      CheckInStatus.missed => 'Please confirm now.',
+      CheckInStatus.pending => 'Please confirm now.',
     };
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionTitle(title: 'Today'),
         Text(
           subtitle,
           style: Theme.of(context).textTheme.bodyMedium,
@@ -389,123 +249,97 @@ class _PrimaryActionCard extends StatelessWidget {
       ],
     );
   }
-
-  String _formatTime(DateTime? timestamp) {
-    if (timestamp == null) return 'just now';
-    final local = timestamp.toLocal();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
-  }
 }
 
-class _SeniorToolButton extends StatelessWidget {
-  const _SeniorToolButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
+class _TodayRoutineCard extends StatelessWidget {
+  const _TodayRoutineCard({
+    required this.checkInState,
+    required this.nextReminder,
+    required this.hydrationState,
+    required this.nutritionState,
+    required this.safeZoneStatus,
+    required this.simplifiedModeEnabled,
+    required this.onMedication,
+    required this.onHydration,
+    required this.onNutrition,
+    required this.onSummary,
+    required this.onCompanion,
   });
 
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
+  final CheckInState checkInState;
+  final MedicationReminder? nextReminder;
+  final HydrationState hydrationState;
+  final NutritionState nutritionState;
+  final SafeZoneStatus safeZoneStatus;
+  final bool simplifiedModeEnabled;
+  final VoidCallback onMedication;
+  final VoidCallback onHydration;
+  final VoidCallback onNutrition;
+  final VoidCallback onSummary;
+  final VoidCallback onCompanion;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 164,
-      child: OutlinedButton.icon(
-        onPressed: onTap,
-        icon: Icon(icon),
-        label: Text(label),
-      ),
-    );
-  }
-}
+    final checkInLabel = switch (checkInState.status) {
+      CheckInStatus.completed => 'Done',
+      CheckInStatus.pending => 'Pending',
+      CheckInStatus.missed => 'Pending',
+    };
 
-class _NextReminderCard extends StatelessWidget {
-  const _NextReminderCard({
-    required this.reminder,
-    required this.reminderIntensityLabel,
-  });
-
-  final MedicationReminder? reminder;
-  final String reminderIntensityLabel;
-
-  @override
-  Widget build(BuildContext context) {
     return AppCard(
+      tone: AppCardTone.sage,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Next reminder',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          Gaps.v4,
-          if (reminder == null)
-            Text(
-              'No pending reminders right now.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            )
-          else
-            Text(
-              '${reminder!.plan.medicationName} (${reminder!.plan.dosageLabel}) at ${reminder!.slotLabel}',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-          Gaps.v4,
-          Text(
-            'Current reminder intensity: $reminderIntensityLabel',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentActivityCard extends StatelessWidget {
-  const _RecentActivityCard({
-    required this.events,
-  });
-
-  final List<PersistedEventRecord> events;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Recent activity',
+            'Today routine',
             style: Theme.of(context).textTheme.titleMedium,
           ),
           Gaps.v8,
-          if (events.isEmpty)
+          Text('Check-in: $checkInLabel'),
+          Text(
+            nextReminder == null
+                ? 'Medication: No pending reminder'
+                : 'Medication: ${nextReminder!.plan.medicationName} at ${nextReminder!.slotLabel}',
+          ),
+          if (!simplifiedModeEnabled) ...[
             Text(
-              'No recent events yet.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            )
-          else
-            ...events.map(
-              (event) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: Text(
-                  '${event.type.timelineLabel} • ${_formatTime(event.happenedAt)}',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ),
+              'Hydration: ${hydrationState.completedCount}/${hydrationState.dailyGoalCompletions}',
             ),
+            Text(
+              'Meals: ${nutritionState.completedCount}/${nutritionState.slots.length}',
+            ),
+            Text('Safe status: ${safeZoneStatus.zoneLabel}'),
+          ],
+          Gaps.v12,
+          Wrap(
+            spacing: AppSpacing.sm,
+            runSpacing: AppSpacing.sm,
+            children: [
+              FilledButton.tonal(
+                onPressed: onMedication,
+                child: const Text('Medication'),
+              ),
+              FilledButton.tonal(
+                onPressed: onHydration,
+                child: const Text('Hydration'),
+              ),
+              FilledButton.tonal(
+                onPressed: onNutrition,
+                child: const Text('Meals'),
+              ),
+              TextButton(
+                onPressed: onSummary,
+                child: const Text('Daily summary'),
+              ),
+              FilledButton.tonal(
+                onPressed: onCompanion,
+                child: const Text('Companion'),
+              ),
+            ],
+          ),
         ],
       ),
     );
-  }
-
-  String _formatTime(DateTime timestamp) {
-    final local = timestamp.toLocal();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
-    return '$hh:$mm';
   }
 }

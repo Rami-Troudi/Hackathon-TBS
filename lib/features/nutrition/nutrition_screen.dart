@@ -29,14 +29,14 @@ class NutritionScreen extends ConsumerWidget {
           return ListView(
             children: [
               Text(
-                'Meal routine for today',
+                'Meals today',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               Gaps.v8,
               AppCard(
                 tone: AppCardTone.clay,
                 child: Text(
-                  'Completed ${data.state.completedCount}/${data.state.slots.length} • Missed ${data.state.missedCount} • Pending ${data.state.pendingCount}',
+                  'You completed ${data.state.completedCount} of ${data.state.slots.length} meal reminders.',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
               ),
@@ -117,9 +117,9 @@ class _MealCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusLabel = switch (meal.status) {
-      MealSlotStatus.pending => 'Pending',
-      MealSlotStatus.completed => 'Completed',
-      MealSlotStatus.missed => 'Missed',
+      MealSlotStatus.pending => 'To do',
+      MealSlotStatus.completed => 'Done',
+      MealSlotStatus.missed => 'Skipped',
     };
     return AppCard(
       child: Column(
@@ -140,7 +140,7 @@ class _MealCard extends StatelessWidget {
             Gaps.v8,
             OutlinedButton(
               onPressed: onSkip,
-              child: const Text('Skip'),
+              child: const Text('Not now'),
             ),
           ] else
             Text(

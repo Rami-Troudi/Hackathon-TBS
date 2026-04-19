@@ -43,19 +43,19 @@ class _SummaryView extends StatelessWidget {
         ),
         Gaps.v16,
         _SummarySection(
-          title: 'Going well',
+          title: 'Today is going well',
           items: summary.whatWentWell,
           emptyLabel: 'No positive highlights yet.',
         ),
         Gaps.v16,
         _SummarySection(
-          title: 'Needs attention',
+          title: 'Keep an eye on',
           items: summary.needsAttention,
           emptyLabel: 'Nothing urgent right now.',
         ),
         Gaps.v16,
         _SummarySection(
-          title: 'Notable events',
+          title: 'Important moments',
           items: summary.notableEvents,
           emptyLabel: 'No notable events yet.',
         ),

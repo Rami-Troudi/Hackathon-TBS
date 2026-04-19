@@ -1,0 +1,4 @@
+enum AssistantRole {
+  user,
+  assistant,
+}

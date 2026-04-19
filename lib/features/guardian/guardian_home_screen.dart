@@ -149,6 +149,13 @@ class GuardianHomeScreen extends ConsumerWidget {
                   onTap: () => context.push(AppRoutes.guardianSummary),
                 ),
               ],
+              Gaps.v8,
+              MonitoringCard(
+                title: 'AI insights',
+                subtitle: 'Grounded Q&A and smart explanations from local data',
+                icon: Icons.smart_toy_outlined,
+                onTap: () => context.push(AppRoutes.guardianInsights),
+              ),
               Gaps.v16,
               _TopAlertsCard(
                 alerts: data.topAlerts,

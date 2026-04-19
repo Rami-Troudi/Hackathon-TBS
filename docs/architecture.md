@@ -1,6 +1,6 @@
-# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4 + G5)
+# Architecture — Senior Companion Prototype (G0 + G1 + G2 + G3 + G4 + G5 + G7)
 
-This document describes the technical architecture after **Group 5** and serves
+This document describes the technical architecture after **Group 7** and serves
 as the implementation guide for future milestones.
 
 ---
@@ -19,7 +19,7 @@ as the implementation guide for future milestones.
 10. [Routing](#10-routing)
 11. [How to add a new feature module](#11-how-to-add-a-new-feature-module)
 12. [How to add a new repository](#12-how-to-add-a-new-repository)
-13. [AI layer integration path](#13-ai-layer-integration-path)
+13. [AI companion layer (G7)](#13-ai-companion-layer-g7)
 14. [Known prototype limitations](#14-known-prototype-limitations)
 
 ---
@@ -57,6 +57,7 @@ imports from features.
 | Folder | Responsibility |
 |---|---|
 | `config/` | Environment-aware app configuration |
+| `ai/` | AI orchestration, context/prompt builders, adapter abstraction, deterministic fallback, status/alert explanation services |
 | `errors/` | `AppException` + `AppErrorMapper` |
 | `events/` | Sealed `AppEvent` hierarchy, `AppEventBus`, persisted event mapping, status engine |
 | `logging/` | `AppLogger` abstraction + `DebugAppLogger` |
@@ -690,6 +691,7 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 | `AppRoutes.seniorHydration` | `/senior/hydration` | `HydrationScreen` |
 | `AppRoutes.seniorNutrition` | `/senior/nutrition` | `NutritionScreen` |
 | `AppRoutes.seniorSummary` | `/senior/summary` | `SeniorSummaryScreen` |
+| `AppRoutes.seniorCompanion` | `/senior/companion` | `SeniorCompanionScreen` |
 | `AppRoutes.guardianHome` | `/guardian` | `GuardianHomeScreen` |
 | `AppRoutes.guardianAlerts` | `/guardian/alerts` | `GuardianAlertsScreen` |
 | `AppRoutes.guardianTimeline` | `/guardian/timeline` | `GuardianTimelineScreen` |
@@ -701,6 +703,7 @@ Routes are defined in `lib/app/router/app_routes.dart` (path constants) and
 | `AppRoutes.guardianNutrition` | `/guardian/nutrition` | `GuardianNutritionScreen` |
 | `AppRoutes.guardianLocation` | `/guardian/location` | `GuardianLocationScreen` |
 | `AppRoutes.guardianSummary` | `/guardian/summary` | `GuardianSummaryScreen` |
+| `AppRoutes.guardianInsights` | `/guardian/insights` | `GuardianInsightsScreen` |
 | `AppRoutes.settings` | `/settings` | `SettingsScreen` |
 
 ### Splash routing logic
@@ -845,57 +848,48 @@ final checkInRepositoryProvider = Provider<CheckInRepository>(
 
 ---
 
-## 13. AI layer integration path
+## 13. AI companion layer (G7)
 
-The AI contributor's work (summaries, prioritization, TTS, companion chat)
-will be integrated by:
+Group 7 adds a grounded AI layer that sits above existing repositories/events/status logic.
 
-### Step 1 — Define the AI service interfaces in `core/`
+### Source-of-truth rules
 
-```dart
-// lib/core/ai/ai_summary_service.dart
-abstract class AiSummaryService {
-  Future<String> generateDailySummary(String seniorId, DateRange range);
-}
+- Deterministic repositories, status engine, alert derivation, and summary repositories remain factual truth.
+- AI is an explanation/rephrasing/guidance layer only.
+- No diagnosis, no invented incidents, no replacement of deterministic alert/status decisions.
 
-// lib/core/ai/ai_alert_prioritizer.dart
-abstract class AiAlertPrioritizer {
-  Future<List<Alert>> prioritize(List<Alert> alerts);
-}
-```
+### Core architecture (`lib/core/ai`)
 
-### Step 2 — Create stub implementations for the prototype
+| Component | Responsibility |
+|---|---|
+| `AiContextBuilder` | Builds senior/guardian context from real local data (summary, alerts, timeline, status, module state). |
+| `AiPromptBuilder` | Produces role-specific constrained prompts (senior calm/simple; guardian concise/actionable). |
+| `AiProviderAdapter` | External provider abstraction (`generateText`) used only when configured. |
+| `AiFallbackService` | Deterministic local responses for all key intents when no provider exists or provider fails. |
+| `AiAssistantRepository` | Orchestrates context -> prompt -> provider/fallback and returns structured assistant responses. |
+| `AlertExplanationService` | Deterministic explanations for active alerts from existing local alert logic. |
+| `StatusExplanationService` | Deterministic explanations for current senior global status. |
+| `AiResponseParser` | Parses provider output into safe assistant response shape. |
 
-```dart
-class StubAiSummaryService implements AiSummaryService {
-  @override
-  Future<String> generateDailySummary(String seniorId, DateRange range) async {
-    return 'Ahmed had a normal day. One missed medication in the evening. '
-           'Check-in completed in the morning.';
-  }
-}
-```
+### Provider modes
 
-### Step 3 — Register in providers.dart
+1. **Fallback mode (default, mandatory)**
+   - Used when `AI_PROVIDER`/`AI_API_KEY` are missing.
+   - Companion and insights remain fully usable with grounded deterministic responses.
+2. **External mode (optional)**
+   - Enabled with dart-defines:
+     - `AI_PROVIDER=openai_compatible`
+     - `AI_API_KEY=...`
+     - `AI_MODEL=...` (optional)
+     - `AI_BASE_URL=...` (optional)
+   - Provider errors automatically degrade to fallback mode.
 
-```dart
-final aiSummaryServiceProvider = Provider<AiSummaryService>(
-  (ref) => StubAiSummaryService(),
-);
-```
+### UI surfaces (G7)
 
-### Step 4 — Replace the stub
+- Senior companion route: `/senior/companion`
+- Guardian insights route: `/guardian/insights`
 
-When the AI contributor delivers their implementation, replace the stub
-in `providers.dart`:
-
-```dart
-final aiSummaryServiceProvider = Provider<AiSummaryService>(
-  (ref) => GeminiAiSummaryService(apiKey: ref.watch(appConfigProvider).aiApiKey),
-);
-```
-
-No other file needs to change.
+Both screens keep local session conversation state and suggestion chips while grounding answers in real local app context.
 
 ---
 
@@ -905,6 +899,7 @@ No other file needs to change.
 |---|---|---|
 | `mock_dashboard_repository` keeps hardcoded fallback values (non-source of truth after G2) | `mock_dashboard_repository.dart` | Backlog cleanup |
 | No dark theme | `app_theme.dart` | G8 |
+| External AI adapter currently supports OpenAI-compatible shape only | `core/ai/ai_provider_adapter.dart` | G8/G9 extensions |
 | `AppSession.toJson/fromJson` remains manual (no codegen) | `app_session.dart` | G2+ |
 | Dio is configured but never used | `networking/` | Later API milestone |
 | Safe-zone location is simulation/manual only (no background tracking) | `local_safe_zone_repository.dart` + location screens | Future optional geo milestone |
